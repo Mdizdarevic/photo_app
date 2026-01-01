@@ -1,71 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // The file you just generated
+import 'presentation/pages/auth/login_page.dart'; // Ensure this path is correct
+import 'presentation/core/app_theme.dart'; // Your custom theme
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // Required for Firebase initialization
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // This connects your code to the Firebase Project (photo-app-72886)
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e");
+  }
+
+  runApp(
+    // ProviderScope is required for Riverpod (Dependency Injection)
+    const ProviderScope(
+      child: PhotoVaultApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class PhotoVaultApp extends StatelessWidget {
+  const PhotoVaultApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Scaffold(
-      appBar: AppBar(
-
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-
-        title: Text(widget.title),
-      ),
-      body: Center(
-
-        child: Column(
-
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+      title: 'PhotoVault',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme, // Use your defined theme
+      // Starting with LoginPage fixes the red "title" lookup error
+      home: const LoginPage(),
     );
   }
 }
