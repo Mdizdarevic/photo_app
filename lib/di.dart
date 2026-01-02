@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -26,11 +27,17 @@ final authServiceProvider = Provider((ref) => AuthService());
 
 // *************** STORAGE STRATEGY *************** //
 // LO3 Desired: Logic to switch between Local and Cloud
+// Ensure it looks like this
 final storageServiceProvider = Provider<IStorageService>((ref) {
-  final local = ref.watch(localDbProvider);
+  // Rename variables so they don't clash with the provider names
+  final db = ref.watch(localDbProvider);
   final cloud = ref.watch(cloudProvider);
 
-  return StorageService(localDb: local, cloudProvider: cloud,);
+  return StorageService(
+    localDb: db,
+    cloudProvider: cloud,
+    useCloud: true,
+  );
 });
 
 // The currently logged in UserEntity
@@ -55,7 +62,48 @@ final photoRepositoryProvider = Provider<PhotoRepository>((ref) {
   return PhotoRepository(storage, logger);
 });
 
-// A StateNotifierProvider to manage the list of photos in the UI (Observer Pattern)
-final photoListProvider = StateNotifierProvider<PhotoNotifier, List<PhotoEntity>>((ref) {
-  return PhotoNotifier(ref.watch(photoRepositoryProvider));
+// In your providers file (likely di.dart or photo_provider.dart)
+// REMOVE the old StateNotifierProvider and replace it with this:
+final photoListProvider = StreamProvider.autoDispose<List<PhotoEntity>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('photos')
+      .orderBy('uploadDate', descending: true)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return PhotoEntity(
+        id: doc.id,
+        thumbnailUrl: data['thumbnailUrl'] ?? '',
+        uploadDate: (data['uploadDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        authorName: data['authorName'] ?? 'Anonymous',
+        description: data['description'] ?? '',
+        hashtags: List<String>.from(data['hashtags'] ?? []),
+      );
+    }).toList();
+  });
+});
+
+final galleryStreamProvider = StreamProvider.autoDispose<List<PhotoEntity>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('photos')
+      .orderBy('uploadDate', descending: true)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+
+      return PhotoEntity(
+        id: doc.id,
+        // Using 'url' from Firestore as the thumbnailUrl
+        thumbnailUrl: data['thumbnailUrl'] ?? data['url'] ?? '',
+        // Convert Firebase Timestamp to DateTime
+        uploadDate: (data['uploadDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        authorName: data['authorName'] ?? 'Anonymous',
+        description: data['description'] ?? '',
+        // Assumes hashtags are stored as a List<String> in Firestore
+        hashtags: List<String>.from(data['hashtags'] ?? []),
+      );
+    }).toList();
+  });
 });

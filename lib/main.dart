@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:photo_app/presentation/pages/splash_screen.dart';
 import 'firebase_options.dart'; // The file you just generated
 import 'presentation/pages/auth/login_page.dart'; // Ensure this path is correct
 import 'presentation/core/app_theme.dart'; // Your custom theme
@@ -36,7 +37,7 @@ class PhotoVaultApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, // Use your defined theme
       // Starting with LoginPage fixes the red "title" lookup error
-      home: const LoginPage(),
+      home: const SplashScreen(),
     );
   }
 }

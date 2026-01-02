@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "513445707596",
+    "project_id": "photo-app-72886",
+    "storage_bucket": "photo-app-72886.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513445707596:android:253cae22c8738cb77719e9",
+        "android_client_info": {
+          "package_name": "hr.algebra.fact_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "513445707596-161be8oj1u1p1n0dtkcpfpt23ng91kmv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hr.algebra.fact_app",
+            "certificate_hash": "d2c86035a009e308e67a867f4974e7c08d5ad84d"
+          }
+        },
+        {
+          "client_id": "513445707596-3up3elr3a6s50nh521sum4pjgngfcstg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi7RFzyZiLtvurHDQPRAAvk_DUBHQeXAg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "513445707596-3up3elr3a6s50nh521sum4pjgngfcstg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "513445707596-7vbo075qe7ukrg9mr8gpaj5pqe9ipnia.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "hr.algebra.factApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

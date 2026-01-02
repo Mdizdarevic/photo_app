@@ -4,6 +4,7 @@ import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
 import '../../core/app_theme.dart';
 import '../gallery/gallery_page.dart';
+import '../main_wrapper.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -15,104 +16,223 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  PackageTier _selectedTier = PackageTier.free; // Default selection
+
+  PackageTier _selectedTier = PackageTier.free; // Keeps track of selection
+  bool _isSigningUp = false; // Toggles Sign In vs Sign Up
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.white,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("PHOTOVAULT",
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 4)),
-            const Text("SELECT YOUR TIER", style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 40),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 60),
+              Text(
+                _isSigningUp ? "Create Account" : "Welcome Back!",
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isSigningUp
+                    ? "Choose a tier and enter your details."
+                    : "Enter your login information",
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 32),
 
-            // Tier Selection Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildTierOption("FREE", PackageTier.free),
-                _buildTierOption("PRO", PackageTier.pro),
-                _buildTierOption("GOLD", PackageTier.gold, isGold: true),
+              // TIER SELECTION (Only shows for Sign Up)
+              if (_isSigningUp) ...[
+                const Text("SELECT YOUR TIER",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTierOption("FREE", PackageTier.free),
+                    _buildTierOption("PRO", PackageTier.pro),
+                    _buildTierOption("GOLD", PackageTier.gold, isGold: true),
+                  ],
+                ),
+                const SizedBox(height: 24),
               ],
-            ),
-            const SizedBox(height: 40),
 
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: "EMAIL"),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "PASSWORD"),
-            ),
-            const SizedBox(height: 30),
+              // EMAIL FIELD
+              _buildTextField("Email Address", _emailController),
+              const SizedBox(height: 16),
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final user = await ref.read(authServiceProvider).registerWithEmail(
-                      _emailController.text,
-                      _passwordController.text,
-                      _selectedTier
-                  );
-                  if (user != null) {
-                    ref.read(currentUserProvider.notifier).state = user;
-                    // Navigate to Gallery
-                  }
-                },
-                child: const Text("CREATE ACCOUNT"),
+              // PASSWORD FIELD
+              _buildTextField("Password", _passwordController, isObscure: true),
+
+              const SizedBox(height: 32),
+
+              // MAIN BUTTON
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (_isSigningUp) {
+                      final user = await ref.read(authServiceProvider).registerWithEmail(
+                          _emailController.text,
+                          _passwordController.text,
+                          _selectedTier
+                      );
+                      if (user != null) {
+                        ref.read(currentUserProvider.notifier).state = user;
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
+                      }
+                    } else {
+                      // Login logic for existing account
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(_isSigningUp ? "Sign Up" : "Sign In"),
+                ),
               ),
-            ),
 
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  // This tells the app to move to the Gallery
-                  Navigator.push(
+              const SizedBox(height: 24),
+
+              if (_isSigningUp) ...[// --- GOOGLE & GITHUB BUTTONS ---
+                Row(
+                  children: [
+                    // Google
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final user = await ref.read(authServiceProvider).signInWithGoogle();
+                          if (user != null) {
+                            ref.read(currentUserProvider.notifier).state = user;
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
+                          }
+                        },
+                        child: Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Image.asset('assets/images/google_logo.png', height: 24),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // GitHub
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final user = await ref.read(authServiceProvider).signInWithGithub();
+                          if (user != null) {
+                            ref.read(currentUserProvider.notifier).state = user;
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
+                          }
+                        },
+                        child: Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Image.asset('assets/images/github_logo.png', height: 24),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // TOGGLE BETWEEN SIGN IN / SIGN UP
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_isSigningUp ? "Already have an Account?" : "Don't have an account?"),
+                  TextButton(
+                    onPressed: () => setState(() => _isSigningUp = !_isSigningUp),
+                    child: Text(
+                      _isSigningUp ? "Sign In" : "Sign Up",
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+
+              // GUEST BYPASS
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const GalleryPage()),
-                  );
-                },
-                child: const Text("Continue as Guest"),
+                    MaterialPageRoute(builder: (context) => const MainWrapper()),
+                  ),
+                  child: const Text("Continue as Guest", style: TextStyle(color: Colors.grey)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // Tier selection helper
   Widget _buildTierOption(String label, PackageTier tier, {bool isGold = false}) {
     bool isSelected = _selectedTier == tier;
     return GestureDetector(
       onTap: () => setState(() => _selectedTier = tier),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: isSelected ? (isGold ? AppTheme.gold : AppTheme.black) : Colors.grey[300]!,
+              color: isSelected ? (isGold ? const Color(0xFFFFD700) : Colors.black) : Colors.grey[300]!,
               width: 2
           ),
-          color: isSelected && !isGold ? AppTheme.black : AppTheme.white,
+          color: isSelected && !isGold ? Colors.black : Colors.white,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-              color: isSelected && !isGold ? AppTheme.white : (isGold && isSelected ? AppTheme.gold : AppTheme.black),
-              fontWeight: FontWeight.bold
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+                color: isSelected && !isGold ? Colors.white : (isGold && isSelected ? const Color(0xFFB8860B) : Colors.black),
+                fontWeight: FontWeight.bold,
+                fontSize: 12
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  // Rounded Text Field helper
+  Widget _buildTextField(String label, TextEditingController controller, {bool isObscure = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: isObscure,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[100],
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
     );
   }
 }

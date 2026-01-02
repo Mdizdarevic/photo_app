@@ -12,7 +12,7 @@ class AppTheme {
       useMaterial3: true,
 
       // Typography
-      fontFamily: 'Georgia', // Or any clean serif/sans-serif you prefer
+      fontFamily: 'Montserrat',
 
       appBarTheme: const AppBarTheme(
         backgroundColor: white,
