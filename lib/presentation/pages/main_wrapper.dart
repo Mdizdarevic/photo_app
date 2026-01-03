@@ -18,32 +18,75 @@ class _MainWrapperState extends ConsumerState<MainWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the current user state
     final user = ref.watch(currentUserProvider);
+    final isSearchVisible = ref.watch(isSearchVisibleProvider);
 
-    // Dynamic pages list
     final List<Widget> _pages = [
       const GalleryPage(),
-      const Center(child: Text("Search Page")),
-      // If user is null, the "Profile" tab shows the Login/Signup screen
+      const GalleryPage(), // Search now uses GalleryPage but filtered
       user == null ? const LoginPage() : ProfilePage(user: user),
     ];
 
     return Scaffold(
-      // Maps bottom nav indices to the _pages list
-      body: _pages[_getMappedIndex(_selectedIndex)],
+      body: Stack(
+        children: [
+          _pages[_getMappedIndex(_selectedIndex)],
 
+          // --- PERSISTENT SEARCH BAR ---
+          if (isSearchVisible)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0, // Sits exactly above the BottomNavigationBar
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))
+                  ],
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: TextField(
+                  autofocus: true,
+                  onChanged: (val) => ref.read(searchProvider.notifier).state = val,
+                  decoration: InputDecoration(
+                    hintText: "Search tags, dates, or authors...",
+                    prefixIcon: const Icon(Icons.search, color: Colors.black),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        ref.read(isSearchVisibleProvider.notifier).state = false;
+                        ref.read(searchProvider.notifier).state = ""; // Clear search on close
+                      },
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 2) {
-            // "Post" button - Navigate to the dedicated Upload page
+          if (index == 1) {
+            // Toggle Search Bar
+            ref.read(isSearchVisibleProvider.notifier).state = !isSearchVisible;
+            setState(() => _selectedIndex = index);
+          } else if (index == 2) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const UploadPage()),
             );
           } else {
-            // Switch tabs normally
+            // Close search bar if navigating to other tabs
+            ref.read(isSearchVisibleProvider.notifier).state = false;
             setState(() => _selectedIndex = index);
           }
         },
@@ -54,32 +97,15 @@ class _MainWrapperState extends ConsumerState<MainWrapper> {
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_rounded),
-              label: 'Gallery'
-          ),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'Search'
-          ),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add_box_outlined, size: 30),
-              label: 'Post'
-          ),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: 'Profile'
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Gallery'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined, size: 30), label: 'Post'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );
   }
 
-  /// Maps the 4 BottomNav items to the 3 available widgets in _pages
-  /// Nav Index 0 (Gallery) -> _pages[0]
-  /// Nav Index 1 (Search)  -> _pages[1]
-  /// Nav Index 2 (Post)    -> Handled by Navigator
-  /// Nav Index 3 (Profile) -> _pages[2]
   int _getMappedIndex(int navIndex) {
     if (navIndex == 3) return 2;
     return navIndex;

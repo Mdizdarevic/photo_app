@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:photo_app/presentation/state/photo_notifier.dart';
 import 'data/datasources/local_db.dart';
+import 'package:intl/intl.dart';
 import 'data/datasources/cloud_provider.dart';
 import 'data/repositories/photo_repository.dart';
 import 'data/services/logger_service.dart';
@@ -110,4 +111,46 @@ final galleryStreamProvider = StreamProvider.autoDispose<List<PhotoEntity>>((ref
       );
     }).toList();
   });
+});
+
+// di.dart
+
+// This fetches the live list of photos from Firestore
+final photosStreamProvider = StreamProvider<List<PhotoEntity>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('photos')
+      .orderBy('uploadDate', descending: true)
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+      .map((doc) => PhotoEntity.fromFirestore(doc))
+      .toList());
+});
+
+// 1. Controls the visibility of the bottom search bar
+final isSearchVisibleProvider = StateProvider<bool>((ref) => false);
+
+// 2. The provider to hold the current search text
+final searchProvider = StateProvider<String>((ref) => "");
+
+// 3. The filtered list logic
+final filteredPhotosProvider = Provider<List<PhotoEntity>>((ref) {
+  // Watch your existing stream provider
+  final allPhotos = ref.watch(photosStreamProvider).value ?? [];
+  final query = ref.watch(searchProvider).toLowerCase();
+
+  if (query.isEmpty) return allPhotos;
+
+  return allPhotos.where((photo) {
+    // Search by Author Name (fixes the 'moreno.dizdarevic' mismatch)
+    final matchesAuthor = photo.authorName.toLowerCase().contains(query);
+
+    // Search by Hashtags
+    final matchesTag = photo.hashtags.any((tag) => tag.toLowerCase().contains(query));
+
+    // Search by Date (Formatted for searchability)
+    final dateString = DateFormat('yyyy-MM-dd').format(photo.uploadDate).toLowerCase();
+    final matchesDate = dateString.contains(query);
+
+    return matchesAuthor || matchesTag || matchesDate;
+  }).toList();
 });
