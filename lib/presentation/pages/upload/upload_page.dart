@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../../data/services/logger_service.dart';
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
 
@@ -79,6 +80,12 @@ class _UploadPageState extends ConsumerState<UploadPage> {
         'hashtags': tags,
         'tier': user.package.toString().split('.').last,
       });
+
+      LoggerService().logAction(
+        userId: user.email,
+        operation: "CREATE_POST",
+        details: "Uploaded description: ${_descriptionController.text}",
+      );
 
       if (!mounted) return;
 

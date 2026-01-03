@@ -108,18 +108,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () async {
+                    UserEntity? user;
+
                     if (_isSigningUp) {
-                      final user = await ref.read(authServiceProvider).registerWithEmail(
-                          _emailController.text,
+                      // SIGN UP MODE
+                      user = await ref.read(authServiceProvider).registerWithEmail(
+                          _emailController.text.trim(),
                           _passwordController.text,
                           _selectedTier
                       );
-                      if (user != null) {
-                        ref.read(currentUserProvider.notifier).state = user;
+                    } else {
+                      // SIGN IN MODE - ADDED THIS
+                      user = await ref.read(authServiceProvider).signInWithEmail(
+                        _emailController.text.trim(),
+                        _passwordController.text,
+                      );
+                    }
+
+                    if (user != null) {
+                      ref.read(currentUserProvider.notifier).state = user;
+                      if (context.mounted) {
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
                       }
                     } else {
-
+                      // Optional: Show error message if login fails
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Authentication Failed. Check credentials.")),
+                        );
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(

@@ -1,36 +1,41 @@
 import 'dart:developer' as developer;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class LoggerService {
   // --- Singleton Pattern Implementation ---
-
-  // Private constructor
   LoggerService._internal();
-
-  // The single instance of the class
   static final LoggerService _instance = LoggerService._internal();
-
-  // Factory constructor to return the same instance
-  factory LoggerService() {
-    return _instance;
-  }
+  factory LoggerService() => _instance;
 
   // --- Logging Logic ---
-
-  /// Logs an action to the console and potentially a local database.
   /// requirement: by who, when, and what operation was made.
-  void logAction({
-    required String userId,
-    required String operation,
-    String? details,
-  }) {
-    final DateTime timestamp = DateTime.now();
+  void logAction({required String userId, required String operation, String? details,}) {
+    // 1. "When" - Formatted for readability
+    final String timestamp = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
-    // Construct the log message
-    final String logMessage =
-        'LOG | User: $userId | Time: $timestamp | Action: $operation | Details: ${details ?? "None"}';
+    // 2. Construct the log message
+    final String logMessage = '''
+    -----------------------------------
+    [AUDIT LOG]
+    WHO:       $userId
+    WHEN:      $timestamp
+    OPERATION: $operation
+    DETAILS:   ${details ?? "None"}
+    -----------------------------------''';
 
-    // For now, we print to the developer console.
-    // Later, this can also write to your local_db.dart.
+    // 3. Print to the "Run" tab (Most reliable for Android Studio)
+    print(logMessage);
+
+    // 4. Log to the "Logcat" tab (Searchable by name)
     developer.log(logMessage, name: 'com.uca.project.logger');
+
+    FirebaseFirestore.instance.collection('audit_logs').add({
+      'userId': userId,
+      'operation': operation,
+      'details': details,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
   }
 }

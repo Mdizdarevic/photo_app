@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../data/services/logger_service.dart';
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
 
@@ -70,6 +71,12 @@ class UpgradePlan extends ConsumerWidget {
           } else {
             messenger.showSnackBar(
               SnackBar(content: Text("Success! Plan changed to ${tier.name}")),
+            );
+
+            LoggerService().logAction(
+              userId: user.email,
+              operation: "CHANGE_PACKAGE",
+              details: "Plan changed to ${tier.name}"
             );
           }
         },

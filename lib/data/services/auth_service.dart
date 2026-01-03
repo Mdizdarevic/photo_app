@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/models/user_entity.dart';
@@ -8,7 +9,6 @@ import 'logger_service.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final LoggerService _logger = LoggerService();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -25,7 +25,6 @@ class AuthService {
         );
       }
     } catch (e) {
-      _logger.logAction(userId: uid, operation: "FETCH_TIER_ERROR", details: e.toString());
     }
     return PackageTier.free;
   }
@@ -40,27 +39,73 @@ class AuthService {
 
       User? user = result.user;
       if (user != null) {
-        // IMPORTANT: Save the initial tier to Firestore so it persists!
+        // Determine the role before saving
+        // If it's your special email, save as 'admin' in Firestore too!
+        final String roleToSave = (email.toLowerCase().trim() == "admin@pothole.com")
+            ? UserRole.admin.name
+            : UserRole.registered.name;
+
         await _db.collection('users').doc(user.uid).set({
           'email': email,
           'package': tier.name,
+          'role': roleToSave, // Save the role explicitly
           'lastTierChangeRequest': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        _logger.logAction(userId: user.uid, operation: "REGISTER_LOCAL", details: "Tier: $tier");
+        LoggerService().logAction(
+          userId: email,
+          operation: "USER_SIGN_UP",
+          details: "Account registered as $roleToSave with ${tier.name} tier",
+        );
 
+        // Return via factory
         return UserFactory.createUser(
           id: user.uid,
           email: email,
-          role: UserRole.registered,
+          role: (roleToSave == "admin") ? UserRole.admin : UserRole.registered,
           package: tier,
         );
       }
     } catch (e) {
-      _logger.logAction(userId: "SYSTEM", operation: "REGISTER_ERROR", details: e.toString());
+      debugPrint("SIGN UP FAILED: $e"); // This will tell you the REAL reason
     }
     return null;
   }
+
+  Future<UserEntity?> signInWithEmail(String email, String password) async {
+    try {
+      // 1. Tell Firebase to check existing credentials
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
+      if (result.user != null) {
+        // 2. Get their data from Firestore
+        final doc = await _db.collection('users').doc(result.user!.uid).get();
+
+        // If the doc doesn't exist (shouldn't happen), we use defaults
+        final data = doc.data() ?? {};
+
+        // 3. Let the Factory build the Admin/User object
+        // This is where your 'admin@pothole.com' check in the Factory works its magic!
+        return UserFactory.createUser(
+          id: result.user!.uid,
+          email: result.user!.email!,
+          role: _parseRole(data['role']),
+          package: _parsePackage(data['package']),
+        );
+      }
+    } catch (e) {
+      debugPrint("SIGN IN ERROR: $e");
+      rethrow; // Pass error to UI to show a SnackBar
+    }
+    return null;
+  }
+
+// Helpers for the method above
+  UserRole _parseRole(String? r) => UserRole.values.firstWhere((e) => e.name == r, orElse: () => UserRole.registered);
+  PackageTier _parsePackage(String? p) => PackageTier.values.firstWhere((e) => e.name == p, orElse: () => PackageTier.free);
 
   // --- Google Sign-In with Persistence ---
   Future<UserEntity?> signInWithGoogle() async {
@@ -77,6 +122,13 @@ class AuthService {
       UserCredential result = await _auth.signInWithCredential(credential);
       if (result.user != null) {
         final savedTier = await _fetchUserTier(result.user!.uid);
+
+        LoggerService().logAction(
+          userId: result.user!.email ?? "Social User",
+          operation: "USER_SIGN_IN",
+          details: "Social login via ${result.credential?.providerId ?? 'Provider'}",
+        );
+
         return UserFactory.createUser(
           id: result.user!.uid,
           email: result.user!.email ?? "",
@@ -85,7 +137,6 @@ class AuthService {
         );
       }
     } catch (e) {
-      _logger.logAction(userId: "SYSTEM", operation: "GOOGLE_ERROR", details: e.toString());
     }
     return null;
   }
@@ -97,6 +148,13 @@ class AuthService {
       UserCredential result = await _auth.signInWithProvider(githubProvider);
       if (result.user != null) {
         final savedTier = await _fetchUserTier(result.user!.uid);
+
+        LoggerService().logAction(
+          userId: result.user!.email ?? "Social User",
+          operation: "USER_SIGN_IN",
+          details: "Social login via ${result.credential?.providerId ?? 'Provider'}",
+        );
+
         return UserFactory.createUser(
           id: result.user!.uid,
           email: result.user!.email ?? "github_user@app.com",
@@ -105,7 +163,6 @@ class AuthService {
         );
       }
     } catch (e) {
-      _logger.logAction(userId: "SYSTEM", operation: "GITHUB_ERROR", details: e.toString());
     }
     return null;
   }
@@ -113,6 +170,13 @@ class AuthService {
   Future<UserEntity?> signInAnonymously() async {
     try {
       UserCredential result = await _auth.signInAnonymously();
+
+      LoggerService().logAction(
+        userId: result.user!.uid, // Use UID as they have no email
+        operation: "USER_SIGN_IN_ANON",
+        details: "Guest access granted",
+      );
+
       return UserFactory.createUser(
         id: result.user!.uid,
         email: "guest@app.com",
@@ -124,7 +188,15 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    final String? userEmail = _auth.currentUser?.email;
+
     await _auth.signOut();
     await GoogleSignIn().signOut();
+
+    LoggerService().logAction(
+      userId: userEmail ?? "Unknown User",
+      operation: "USER_SIGN_OUT",
+      details: "User manually signed out",
+    );
   }
 }

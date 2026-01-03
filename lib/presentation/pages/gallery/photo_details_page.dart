@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../data/services/logger_service.dart';
 import '../../../domain/models/photo_entity.dart';
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
@@ -42,6 +43,10 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
   // --- EDITING LOGIC ---
   Future<void> _saveChanges() async {
     try {
+
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser == null) return;
+
       final List<String> updatedTags = _hashtagController.text
           .split(' ')
           .where((t) => t.isNotEmpty)
@@ -57,6 +62,12 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
       });
 
       setState(() => _isEditing = false);
+
+      LoggerService().logAction(
+        userId: currentUser.email,
+        operation: "EDIT_POST",
+        details: "Updated description: ${_descriptionController.text} | hashtags: ${_hashtagController.text}",
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -148,17 +159,16 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
     final formattedDate = DateFormat.yMMMd().format(widget.photo.uploadDate);
     final currentUser = ref.watch(currentUserProvider);
 
-    print("Current User Email: ${currentUser?.email}");
-    print("Photo Author Name (Email): ${widget.photo.authorName}");
-
     // 1. Registered users can download.
     final bool isRegisteredUser = currentUser != null && currentUser.role != UserRole.anonymous;
 
     // 2. Ownership check using EMAIL.
     // Ensure widget.photo.authorName contains the creator's email.
+    final bool isAdmin = currentUser?.role == UserRole.admin;
     final bool isOwner = isRegisteredUser &&
         (currentUser.email?.toLowerCase().contains(widget.photo.authorName.toLowerCase()) ?? false);
 
+    final bool canManage = isAdmin || isOwner;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -169,7 +179,7 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
         title: Text(_isEditing ? "Edit Details" : widget.photo.authorName),
         actions: [
           // The Edit pencil ONLY shows if you are the owner (matching email)
-          if (isOwner)
+          if (canManage)
             IconButton(
               icon: Icon(_isEditing ? Icons.close : Icons.edit),
               onPressed: () => setState(() => _isEditing = !_isEditing),
@@ -215,6 +225,7 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
                     const SizedBox(height: 30),
 
                     // Action Buttons: Save and Delete
+                    // Inside the 'Row' under the '--- EDIT MODE ---' section
                     Row(
                       children: [
                         Expanded(
@@ -225,6 +236,11 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // DELETE BUTTON
+                        IconButton(
+                          onPressed: () => _deletePhoto(context),
+                          icon: const Icon(Icons.delete_forever, color: Colors.red, size: 30),
+                        ),
                       ],
                     ),
                   ],
@@ -238,6 +254,30 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deletePhoto(BuildContext context) async {
+    final currentUser = ref.read(currentUserProvider);
+
+    try {
+      await FirebaseFirestore.instance.collection('photos').doc(widget.photo.id).delete();
+
+      // LOG THE ACTION
+      LoggerService().logAction(
+        userId: currentUser?.email ?? "Unknown",
+        operation: "DELETE_POST",
+        details: "Deleted Photo ID: ${widget.photo.id} (Author: ${widget.photo.authorName})",
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Go back to gallery
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Post deleted successfully")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Delete error: $e");
+    }
   }
 
   Widget _buildInfoSection(String title, String content) {

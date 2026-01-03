@@ -62,9 +62,8 @@ final imageProcessorProvider = Provider((ref) => ImageProcessor());
 final photoRepositoryProvider = Provider<PhotoRepository>((ref) {
   // ref.watch ensures that if storage or logger changes, the repo updates
   final storage = ref.watch(storageServiceProvider);
-  final logger = ref.watch(loggerProvider);
 
-  return PhotoRepository(storage, logger);
+  return PhotoRepository(storage);
 });
 
 // In your providers file (likely di.dart or photo_provider.dart)
@@ -138,7 +137,14 @@ final filteredPhotosProvider = Provider<List<PhotoEntity>>((ref) {
   final allPhotos = ref.watch(photosStreamProvider).value ?? [];
   final query = ref.watch(searchProvider).toLowerCase();
 
+  // Get the current user and logger instance
+  final currentUser = ref.watch(currentUserProvider);
+  final logger = ref.watch(loggerProvider);
+
   if (query.isEmpty) return allPhotos;
+
+  // LOGGING ACTION: Search Operation
+  // Requirement: By who, when, and what operation
 
   return allPhotos.where((photo) {
     // Search by Author Name (fixes the 'moreno.dizdarevic' mismatch)
@@ -153,4 +159,60 @@ final filteredPhotosProvider = Provider<List<PhotoEntity>>((ref) {
 
     return matchesAuthor || matchesTag || matchesDate;
   }).toList();
+});
+
+// 1. Define the possible tiers
+enum UserPackage { free, pro, gold }
+
+// 2. Identify the user's current package (Defaulting to Free for now)
+// In a real app, you would fetch this from a 'role' or 'package' field in Firestore
+final userPackageProvider = StateProvider<UserPackage>((ref) => UserPackage.free);
+
+// 3. Define the limit based on the selected package
+// di.dart
+final packageLimitProvider = Provider<int?>((ref) {
+  final userAsync = ref.watch(userStreamProvider);
+  final logger = ref.watch(loggerProvider);
+
+  return userAsync.when(
+    data: (user) {
+      if (user == null) return 20;
+
+      switch (user.package) {
+        case PackageTier.free: return 20;
+        case PackageTier.pro:  return 100;
+        case PackageTier.gold: return null;
+        default: return 20;
+      }
+    },
+    loading: () => 20,
+    error: (_, __) => 20,
+  );
+});
+
+// 4. Calculate current usage
+final userPostCountProvider = Provider<int>((ref) {
+  final allPhotos = ref.watch(photosStreamProvider).value ?? [];
+  final currentUser = ref.watch(currentUserProvider);
+
+  if (currentUser == null) return 0;
+
+  // Use the .contains() fix for your email/username mismatch
+  return allPhotos.where((photo) =>
+      currentUser.email!.toLowerCase().contains(photo.authorName.toLowerCase())
+  ).length;
+});
+
+// di.dart
+
+// This listens to the user's document in real-time
+final userStreamProvider = StreamProvider<UserEntity?>((ref) {
+  final authUser = FirebaseAuth.instance.currentUser;
+  if (authUser == null) return Stream.value(null);
+
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(authUser.uid)
+      .snapshots()
+      .map((snapshot) => snapshot.exists ? UserEntity.fromFirestore(snapshot) : null);
 });

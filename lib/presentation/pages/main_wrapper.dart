@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_app/presentation/pages/profile/profile_page.dart';
 import 'package:photo_app/presentation/pages/upload/upload_page.dart';
 import '../../../di.dart'; // Ensure this points to where your providers are
+import '../../data/services/logger_service.dart';
 import 'auth/login_page.dart';
 import 'gallery/gallery_page.dart';
 
@@ -47,62 +48,106 @@ class _MainWrapperState extends ConsumerState<MainWrapper> {
                   ],
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                child: TextField(
-                  autofocus: true,
-                  onChanged: (val) => ref.read(searchProvider.notifier).state = val,
-                  decoration: InputDecoration(
-                    hintText: "Search tags, dates, or authors...",
-                    prefixIcon: const Icon(Icons.search, color: Colors.black),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        ref.read(isSearchVisibleProvider.notifier).state = false;
-                        ref.read(searchProvider.notifier).state = ""; // Clear search on close
-                      },
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
+                  child: TextField(
+                    autofocus: true,
+                    onChanged: (val) {
+                      // 1. Update the search state for the UI
+                      ref.read(searchProvider.notifier).state = val;
+
+                      // 2. Log the action (The "What")
+                      if (val.isNotEmpty) {
+                        final currentUser = ref.read(currentUserProvider);
+
+                        // We use the singleton factory you provided
+                        LoggerService().logAction(
+                          userId: currentUser?.email ?? "Guest", // The "Who"
+                          operation: "SEARCH_GALLERY",           // The "What" (Operation)
+                          details: "Query: $val",                // The "What" (Details)
+                        );
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Search tags, dates, or authors...",
+                      prefixIcon: const Icon(Icons.search, color: Colors.black),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          ref.read(isSearchVisibleProvider.notifier).state = false;
+                          ref.read(searchProvider.notifier).state = ""; // Clear search on close
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
-                ),
               ),
             ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          if (index == 1) {
-            // Toggle Search Bar
-            ref.read(isSearchVisibleProvider.notifier).state = !isSearchVisible;
-            setState(() => _selectedIndex = index);
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const UploadPage()),
-            );
-          } else {
-            // Close search bar if navigating to other tabs
-            ref.read(isSearchVisibleProvider.notifier).state = false;
-            setState(() => _selectedIndex = index);
-          }
-        },
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black45,
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Gallery'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined, size: 30), label: 'Post'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            if (index == 1) {
+              // 1. Toggle Search Bar
+              final isSearchVisible = ref.read(isSearchVisibleProvider);
+              ref.read(isSearchVisibleProvider.notifier).state = !isSearchVisible;
+              setState(() => _selectedIndex = index);
+            } else if (index == 2) {
+              // 2. Consumption Check for the "Post" button
+              final postCount = ref.read(userPostCountProvider);
+              final limit = ref.read(packageLimitProvider);
+
+              // If limit is null (Gold), it always allows the upload.
+              // If limit exists and count is >= limit, block the upload.
+              if (limit != null && postCount >= limit) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Package limit reached ($postCount/$limit). Upgrade to Pro or Gold!"),
+                    backgroundColor: Colors.redAccent,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const UploadPage()),
+                );
+              }
+            } else {
+              // 3. Close search bar if navigating to Home or Profile
+              ref.read(isSearchVisibleProvider.notifier).state = false;
+              setState(() => _selectedIndex = index);
+            }
+          },
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.black45,
+          type: BottomNavigationBarType.fixed,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items: const [
+            BottomNavigationBarItem(
+                icon: Icon(Icons.grid_view_rounded),
+                label: 'Gallery'
+            ),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.search),
+                label: 'Search'
+            ),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.add_box_outlined, size: 30),
+                label: 'Post'
+            ),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                label: 'Profile'
+            ),
+          ],
+        ),
     );
   }
 

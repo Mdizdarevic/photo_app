@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_app/presentation/pages/profile/upgrade_plan.dart';
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
+// Added this import to allow navigation to the Dashboard
+import '../admin/admin_dashboard.dart';
+import 'consumption_tracker.dart';
 
 class ProfilePage extends ConsumerWidget {
   final UserEntity user;
@@ -21,7 +24,6 @@ class ProfilePage extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        // Moved Sign Out to the top right actions
         actions: [
           TextButton(
             onPressed: () {
@@ -35,71 +37,123 @@ class ProfilePage extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8), // Small padding from the edge
+          const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.black,
-              child: Icon(Icons.person, size: 45, color: Colors.white),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "EMAIL",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              user.email,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              "CURRENT PLAN",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildTierBadge(user.package),
-            const SizedBox(height: 40),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- ADMIN CONTROL CENTER BUTTON (ONLY FOR ADMINS) ---
+              if (user.role == UserRole.admin) ...[
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 32),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.amber,
+                          child: Icon(Icons.shield, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                "ADMIN CONTROL CENTER",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              Text(
+                                "Manage users and view global stats",
+                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.amber),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
 
-            // Change Plan Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: OutlinedButton(
-                onPressed: () => UpgradePlan.show(context, user),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.black, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              const CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.black,
+                child: Icon(Icons.person, size: 45, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "EMAIL",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  letterSpacing: 1.1,
                 ),
-                child: const Text(
-                  "Change My Plan",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                user.email,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                "CURRENT PLAN",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildTierBadge(user.package),
+
+              const SizedBox(height: 32),
+              const ConsumptionTracker(),
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: () => UpgradePlan.show(context, user),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.black, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Change My Plan",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
