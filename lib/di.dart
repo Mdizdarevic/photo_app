@@ -12,12 +12,16 @@ import 'data/services/auth_service.dart';
 import 'domain/models/photo_entity.dart';
 import 'domain/models/user_entity.dart';
 import 'domain/patterns/image_processor.dart';
+import 'data/services/tier_service.dart';
 
 
 
 // *************** DATA SOURCES *************** //
 final localDbProvider = Provider((ref) => LocalDatabase());
+
 final cloudProvider = Provider((ref) => CloudProvider());
+
+final tierServiceProvider = Provider((ref) => TierService());
 
 // *************** SERVICES (Singletons) *************** //
 // Pattern: Singleton & Strategy Context

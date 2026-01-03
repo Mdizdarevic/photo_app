@@ -1,17 +1,36 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart'; // Add this to pubspec.yaml
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/models/user_entity.dart';
 import '../../domain/patterns/user_factory.dart';
 import 'logger_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final LoggerService _logger = LoggerService();
 
-  // Stream to track auth state changes (Observer Pattern via Riverpod)
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // --- LO1: Local Account Registration ---
+  // Helper to fetch persistent data from Firestore
+  Future<PackageTier> _fetchUserTier(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final tierString = data['package'] as String?;
+        return PackageTier.values.firstWhere(
+              (e) => e.name == tierString,
+          orElse: () => PackageTier.free,
+        );
+      }
+    } catch (e) {
+      _logger.logAction(userId: uid, operation: "FETCH_TIER_ERROR", details: e.toString());
+    }
+    return PackageTier.free;
+  }
+
+  // --- RE-ADDED: Local Account Registration ---
   Future<UserEntity?> registerWithEmail(String email, String password, PackageTier tier) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -21,6 +40,13 @@ class AuthService {
 
       User? user = result.user;
       if (user != null) {
+        // IMPORTANT: Save the initial tier to Firestore so it persists!
+        await _db.collection('users').doc(user.uid).set({
+          'email': email,
+          'package': tier.name,
+          'lastTierChangeRequest': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         _logger.logAction(userId: user.uid, operation: "REGISTER_LOCAL", details: "Tier: $tier");
 
         return UserFactory.createUser(
@@ -36,35 +62,26 @@ class AuthService {
     return null;
   }
 
-  // --- LO1 Desired: Google Sign-In ---
+  // --- Google Sign-In with Persistence ---
   Future<UserEntity?> signInWithGoogle() async {
     try {
-      _logger.logAction(userId: "PENDING", operation: "LOGIN_GOOGLE");
-
-      // 1. Trigger the Google Authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null; // User cancelled
+      if (googleUser == null) return null;
 
-      // 2. Obtain auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // 3. Create a new credential for Firebase
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 4. Sign in to Firebase with the Google credential
       UserCredential result = await _auth.signInWithCredential(credential);
-      User? user = result.user;
-
-      if (user != null) {
-        _logger.logAction(userId: user.uid, operation: "SUCCESS_GOOGLE");
+      if (result.user != null) {
+        final savedTier = await _fetchUserTier(result.user!.uid);
         return UserFactory.createUser(
-          id: user.uid,
-          email: user.email ?? "",
+          id: result.user!.uid,
+          email: result.user!.email ?? "",
           role: UserRole.registered,
-          package: PackageTier.free, // Defaulting to free for social login
+          package: savedTier,
         );
       }
     } catch (e) {
@@ -73,25 +90,18 @@ class AuthService {
     return null;
   }
 
-  // --- LO1 Desired: GitHub Sign-In ---
+  // --- GitHub Sign-In with Persistence ---
   Future<UserEntity?> signInWithGithub() async {
     try {
-      _logger.logAction(userId: "PENDING", operation: "LOGIN_GITHUB");
-
-      // 1. Use the GithubAuthProvider (Firebase handles the OAuth handshake)
       GithubAuthProvider githubProvider = GithubAuthProvider();
-
-      // 2. Trigger the sign-in (Opens a secure web view on mobile)
       UserCredential result = await _auth.signInWithProvider(githubProvider);
-      User? user = result.user;
-
-      if (user != null) {
-        _logger.logAction(userId: user.uid, operation: "SUCCESS_GITHUB");
+      if (result.user != null) {
+        final savedTier = await _fetchUserTier(result.user!.uid);
         return UserFactory.createUser(
-          id: user.uid,
-          email: user.email ?? "github_user@app.com",
+          id: result.user!.uid,
+          email: result.user!.email ?? "github_user@app.com",
           role: UserRole.registered,
-          package: PackageTier.free,
+          package: savedTier,
         );
       }
     } catch (e) {
@@ -100,12 +110,9 @@ class AuthService {
     return null;
   }
 
-  // --- LO1 Minimum: Anonymous Login ---
   Future<UserEntity?> signInAnonymously() async {
     try {
       UserCredential result = await _auth.signInAnonymously();
-      _logger.logAction(userId: result.user!.uid, operation: "LOGIN_ANONYMOUS");
-
       return UserFactory.createUser(
         id: result.user!.uid,
         email: "guest@app.com",
@@ -117,9 +124,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    // Sign out of Firebase
     await _auth.signOut();
-    // Also sign out of Google to ensure the account picker shows up next time
     await GoogleSignIn().signOut();
   }
 }

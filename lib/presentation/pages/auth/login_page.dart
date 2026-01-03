@@ -17,8 +17,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  PackageTier _selectedTier = PackageTier.free; // Keeps track of selection
-  bool _isSigningUp = false; // Toggles Sign In vs Sign Up
+  PackageTier _selectedTier = PackageTier.free;
+  bool _isSigningUp = false;
+
+  // 1. Helper to provide the text details
+  String _getTierDescription() {
+    switch (_selectedTier) {
+      case PackageTier.free:
+        return "Free: 3 posts/day, JPG format, and standard resizing.";
+      case PackageTier.pro:
+        return "Pro: 20 posts/day, PNG/JPG support, and custom photo filters.";
+      case PackageTier.gold:
+        return "Gold: Unlimited posts, max resolution, and full creative control.";
+      default:
+        return "";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             children: [
               const SizedBox(height: 60),
               Text(
-                _isSigningUp ? "Create Account" : "Welcome Back!",
+                _isSigningUp ? "Create Account." : "Please Sign In.",
                 style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
               ),
               const SizedBox(height: 8),
@@ -44,7 +58,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
               const SizedBox(height: 32),
 
-              // TIER SELECTION (Only shows for Sign Up)
               if (_isSigningUp) ...[
                 const Text("SELECT YOUR TIER",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
@@ -57,16 +70,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     _buildTierOption("GOLD", PackageTier.gold, isGold: true),
                   ],
                 ),
+
+                // 2. THE DYNAMIC INFO TEXT
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _getTierDescription(),
+                          style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
               ],
 
-              // EMAIL FIELD
               _buildTextField("Email Address", _emailController),
               const SizedBox(height: 16),
-
-              // PASSWORD FIELD
               _buildTextField("Password", _passwordController, isObscure: true),
-
               const SizedBox(height: 32),
 
               // MAIN BUTTON
@@ -86,7 +119,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
                       }
                     } else {
-                      // Login logic for existing account
+
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -100,60 +133,57 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               const SizedBox(height: 24),
 
-              if (_isSigningUp) ...[// --- GOOGLE & GITHUB BUTTONS ---
-                Row(
-                  children: [
-                    // Google
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
-                          final user = await ref.read(authServiceProvider).signInWithGoogle();
-                          if (user != null) {
-                            ref.read(currentUserProvider.notifier).state = user;
-                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
-                          }
-                        },
-                        child: Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Image.asset('assets/images/google_logo.png', height: 24),
-                          ),
+              // SOCIAL BUTTONS (Only if signing up/signing in)
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final user = await ref.read(authServiceProvider).signInWithGoogle();
+                        if (user != null) {
+                          ref.read(currentUserProvider.notifier).state = user;
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
+                        }
+                      },
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Image.asset('assets/images/google_logo.png', height: 24),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // GitHub
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
-                          final user = await ref.read(authServiceProvider).signInWithGithub();
-                          if (user != null) {
-                            ref.read(currentUserProvider.notifier).state = user;
-                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
-                          }
-                        },
-                        child: Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Image.asset('assets/images/github_logo.png', height: 24),
-                          ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final user = await ref.read(authServiceProvider).signInWithGithub();
+                        if (user != null) {
+                          ref.read(currentUserProvider.notifier).state = user;
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
+                        }
+                      },
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Image.asset('assets/images/github_logo.png', height: 24),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 16),
 
-              // TOGGLE BETWEEN SIGN IN / SIGN UP
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -168,7 +198,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ],
               ),
 
-              // GUEST BYPASS
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pushReplacement(
@@ -185,7 +214,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  // Tier selection helper
   Widget _buildTierOption(String label, PackageTier tier, {bool isGold = false}) {
     bool isSelected = _selectedTier == tier;
     return GestureDetector(
@@ -215,7 +243,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  // Rounded Text Field helper
   Widget _buildTextField(String label, TextEditingController controller, {bool isObscure = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,15 +6,13 @@ class UserEntity {
   final String id;
   final String email;
   final UserRole role;
-  final PackageTier package;
+  final PackageTier package; // This will update instantly now
 
-  // Track consumption for the daily limit requirement
   final int photosUploadedToday;
   final DateTime? lastUploadDate;
 
-  // Track if a package change is pending for tomorrow
-  final PackageTier? pendingPackage;
-  final DateTime? packageChangeDate;
+  // Requirement: "Users can change the packet once a day"
+  final DateTime? lastTierChangeRequest;
 
   UserEntity({
     required this.id,
@@ -23,13 +21,23 @@ class UserEntity {
     this.package = PackageTier.free,
     this.photosUploadedToday = 0,
     this.lastUploadDate,
-    this.pendingPackage,
-    this.packageChangeDate,
+    this.lastTierChangeRequest,
   });
 
-  // Helper to check if user is Admin (for LO2 Minimum)
-  bool get isAdmin => role == UserRole.admin;
-
-  // Helper to check if user is Anonymous (for LO2 Minimum)
-  bool get isAnonymous => role == UserRole.anonymous;
+  UserEntity copyWith({
+    PackageTier? package,
+    int? photosUploadedToday,
+    DateTime? lastUploadDate,
+    DateTime? lastTierChangeRequest,
+  }) {
+    return UserEntity(
+      id: id,
+      email: email,
+      role: role,
+      package: package ?? this.package,
+      photosUploadedToday: photosUploadedToday ?? this.photosUploadedToday,
+      lastUploadDate: lastUploadDate ?? this.lastUploadDate,
+      lastTierChangeRequest: lastTierChangeRequest ?? this.lastTierChangeRequest,
+    );
+  }
 }

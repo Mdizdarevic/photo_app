@@ -14,8 +14,6 @@ class AppConstants {
   static const double goldMaxSizeMB = 100.0;
   static const bool useCloudStorage = false;
 
-  static const int defaultThumbnailCount = 10;
-
   static const List<String> supportedFormats = ['PNG', 'JPG', 'BMP'];
   static const List<String> availableFilters = ['Resize', 'Sepia', 'Blur'];
 }

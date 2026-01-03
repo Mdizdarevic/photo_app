@@ -1,9 +1,11 @@
-import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for direct UID access
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../../di.dart';
-import '../../../domain/patterns/image_strategy.dart';
-import '../../core/app_theme.dart';
+import '../../../domain/models/user_entity.dart';
 
 class UploadPage extends ConsumerStatefulWidget {
   const UploadPage({super.key});
@@ -13,106 +15,207 @@ class UploadPage extends ConsumerStatefulWidget {
 }
 
 class _UploadPageState extends ConsumerState<UploadPage> {
-  File? _selectedImage;
-  String _activeFilter = "None";
+  File? _imageFile;
+  bool _isUploading = false;
+  final _descriptionController = TextEditingController();
+  final _hashtagController = TextEditingController();
 
-  // Logic to pick image and apply Strategy Pattern
-  void _applyFilter(ImageProcessingStrategy strategy, String name) async {
-    if (_selectedImage == null) return;
+  // Utility to turn text like "#pothole, #city" into a clean list ['pothole', 'city']
+  List<String> _parseHashtags(String input) {
+    if (input.isEmpty) return [];
+    return input
+        .split(RegExp(r'[\s,]+'))
+        .where((tag) => tag.isNotEmpty)
+        .map((tag) => tag.replaceAll('#', '').toLowerCase().trim())
+        .toList();
+  }
 
-    final processor = ref.read(imageProcessorProvider);
-    processor.setStrategy(strategy);
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    final processedFile = await processor.executeProcessing(_selectedImage!);
-    setState(() {
-      _selectedImage = processedFile;
-      _activeFilter = name;
-    });
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _handlePost() async {
+    if (_imageFile == null) return;
+
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please sign in to post.")),
+      );
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      final storageService = ref.read(storageServiceProvider);
+
+      // 1. Unique filename for Storage
+      String fileName = 'pothole_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // 2. Upload the file to Storage and get the download URL
+      final String downloadUrl = await storageService.uploadPhoto(
+        _imageFile!,
+        fileName,
+      );
+
+      // 3. Parse hashtags
+      List<String> tags = _parseHashtags(_hashtagController.text);
+
+      // 4. CREATE FIRESTORE RECORD (The 'Receipt' for the Gallery)
+      await FirebaseFirestore.instance.collection('photos').add({
+        'thumbnailUrl': downloadUrl,
+        'uploadDate': FieldValue.serverTimestamp(),
+        'authorName': user.email.split('@')[0], // Uses email prefix as name
+        'authorId': user.id,
+        'description': _descriptionController.text,
+        'hashtags': tags,
+        'tier': user.package.toString().split('.').last,
+      });
+
+      if (!mounted) return;
+
+      // Navigate back and show success
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Post Successful!")),
+      );
+
+    } catch (e) {
+      debugPrint("UPLOAD ERROR: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Upload failed: $e")),
+        );
+        setState(() => _isUploading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // LO1: Access user's package limits
-    final user = ref.watch(currentUserProvider);
-
     return Scaffold(
-      appBar: AppBar(title: const Text("NEW POST")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("New Post",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             // Image Preview Area
-            Container(
-              height: 300,
-              width: double.infinity,
-              color: AppTheme.lightGrey,
-              child: _selectedImage != null
-                  ? Image.file(_selectedImage!, fit: BoxFit.contain)
-                  : const Center(child: Text("SELECT A PHOTO")),
-            ),
-
-            // LO4: Filter Selection (Strategy Pattern UI)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text("SELECT FILTER", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _filterButton("None", () => setState(() => _activeFilter = "None")),
-                _filterButton("Sepia", () => _applyFilter(SepiaStrategy(), "Sepia")),
-                _filterButton("Blur", () => _applyFilter(BlurStrategy(), "Blur")),
-              ],
-            ),
-
-            // Metadata Inputs (LO2)
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const TextField(decoration: InputDecoration(labelText: "DESCRIPTION")),
-                  const SizedBox(height: 15),
-                  const TextField(decoration: InputDecoration(labelText: "HASHTAGS (comma separated)")),
-                  const SizedBox(height: 30),
-
-                  // Upload Button with Package Check
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // LO1: Enforce daily limit check here
-                        if (user!.photosUploadedToday >= 5) { // Example limit
-                          _showLimitReached();
-                        } else {
-                          // Proceed with Firebase Upload
-                        }
-                      },
-                      child: const Text("PUBLISH"),
-                    ),
-                  )
-                ],
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: _imageFile != null
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(_imageFile!, fit: BoxFit.cover),
+                )
+                    : const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined, size: 50, color: Colors.grey),
+                    SizedBox(height: 8),
+                    Text("Tap to select pothole photo",
+                        style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 24),
+
+            _buildInputLabel("Description"),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: _inputDecoration("Write about the pothole..."),
+            ),
+
+            const SizedBox(height: 20),
+
+            _buildInputLabel("Hashtags"),
+            TextField(
+              controller: _hashtagController,
+              decoration: _inputDecoration("#pothole #broken #citylife"),
+            ),
+            const SizedBox(height: 8),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Separate tags with spaces or commas",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // POST BUTTON
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: (_imageFile == null || _isUploading) ? null : _handlePost,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey[300],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: _isUploading
+                    ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                )
+                    : const Text("Post",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _filterButton(String label, VoidCallback onTap) {
-    bool isActive = _activeFilter == label;
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: isActive ? AppTheme.black : AppTheme.white,
-        foregroundColor: isActive ? AppTheme.white : AppTheme.black,
+  Widget _buildInputLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
       ),
-      child: Text(label),
     );
   }
 
-  void _showLimitReached() {
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Daily limit reached! Upgrade to PRO for more."))
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      filled: true,
+      fillColor: Colors.grey[100],
+      contentPadding: const EdgeInsets.all(16),
     );
   }
 }
