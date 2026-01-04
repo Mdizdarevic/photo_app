@@ -33,10 +33,9 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.white,
         body: Stack(
           children: [
-            // 1. Logo: Centered and pushed slightly "up"
             Center(
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0), // Increase this to push the logo higher
+                padding: const EdgeInsets.only(bottom: 20.0),
                 child: SizedBox(
                   width: 200,
                   height: 200,
@@ -48,7 +47,6 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
 
-            // 2. Text: Pinned to the bottom of the screen
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(

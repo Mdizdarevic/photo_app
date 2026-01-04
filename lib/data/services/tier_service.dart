@@ -3,17 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/user_entity.dart';
 import '../../../di.dart';
 
+// When registering a user, you have to choose one of the packages for use: FREE,
+// PRO, or GOLD - limit the price of the package yourself (e.g., upload size, daily upload limit,
+// maximum spend of uploaded photos, etc.)
+
 class TierService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Changes the package immediately.
-  /// Requirement: Only allowed once per day.
-  // data/services/tier_service.dart
-
-  // data/services/tier_service.dart
   Future<String?> changeTierInstant(UserEntity user, PackageTier newTier, WidgetRef ref) async {
     try {
-      // This creates or updates the document permanently
       await _db.collection('users').doc(user.id).set({
         'package': newTier.name, // Saves as "pro" or "gold"
         'lastTierChangeRequest': FieldValue.serverTimestamp(),

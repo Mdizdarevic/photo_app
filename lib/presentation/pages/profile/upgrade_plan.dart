@@ -9,7 +9,6 @@ class UpgradePlan extends ConsumerWidget {
 
   const UpgradePlan({super.key, required this.user});
 
-  // Helper to show the sheet
   static void show(BuildContext context, UserEntity user) {
     showModalBottomSheet(
       context: context,
@@ -56,16 +55,13 @@ class UpgradePlan extends ConsumerWidget {
       trailing: isCurrent ? const Icon(Icons.check_circle, color: Colors.green) : null,
       enabled: !isCurrent, // Disable the tile for the current plan
         onTap: () async {
-          // 1. Grab the messenger while the context is still valid (before the await)
           final messenger = ScaffoldMessenger.of(context);
           final navigator = Navigator.of(context);
 
           final error = await ref.read(tierServiceProvider).changeTierInstant(user, tier, ref);
 
-          // 2. Close the sheet AFTER the work is done
           navigator.pop();
 
-          // 3. Use the 'messenger' variable we saved earlier
           if (error != null) {
             messenger.showSnackBar(SnackBar(content: Text("Error: $error")));
           } else {

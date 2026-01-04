@@ -16,7 +16,6 @@ class PackageConfig {
     required this.allowedFilters,
   });
 
-  // Factory to get config based on the User's tier
   factory PackageConfig.fromTier(PackageTier tier) {
     switch (tier) {
       case PackageTier.pro:
@@ -25,7 +24,7 @@ class PackageConfig {
           dailyUploadLimit: AppConstants.proDailyLimit,
           maxFileSizeMB: AppConstants.proMaxSizeMB,
           allowedFormats: ['PNG', 'JPG'],
-          allowedFilters: ['Resize', 'Sepia'], // PRO gets some filters
+          allowedFilters: ['Resize', 'Sepia'],
         );
       case PackageTier.gold:
         return PackageConfig(
@@ -33,7 +32,7 @@ class PackageConfig {
           dailyUploadLimit: AppConstants.goldDailyLimit,
           maxFileSizeMB: AppConstants.goldMaxSizeMB,
           allowedFormats: AppConstants.supportedFormats,
-          allowedFilters: AppConstants.availableFilters, // GOLD gets all filters
+          allowedFilters: AppConstants.availableFilters,
         );
       case PackageTier.free:
       default:
@@ -41,7 +40,7 @@ class PackageConfig {
           tier: PackageTier.free,
           dailyUploadLimit: AppConstants.freeDailyLimit,
           maxFileSizeMB: AppConstants.freeMaxSizeMB,
-          allowedFormats: ['JPG'], // FREE is limited
+          allowedFormats: ['JPG'],
           allowedFilters: ['Resize'],
         );
     }

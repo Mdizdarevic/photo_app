@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:photo_app/presentation/pages/profile/upgrade_plan.dart';
-import '../../../di.dart';
+import 'package:photo_app/presentation/pages/profile/consumption_tracker.dart';
 import '../../../domain/models/user_entity.dart';
-// Added this import to allow navigation to the Dashboard
-import '../admin/admin_dashboard.dart';
-import 'consumption_tracker.dart';
+import '../../../domain/patterns/command_actions.dart';
+
 
 class ProfilePage extends ConsumerWidget {
   final UserEntity user;
@@ -25,19 +23,19 @@ class ProfilePage extends ConsumerWidget {
         elevation: 0,
         centerTitle: false,
         actions: [
-          TextButton(
-            onPressed: () {
-              ref.read(currentUserProvider.notifier).state = null;
-            },
-            child: const Text(
-              "Sign Out",
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
+          AppBarCommandButton(
+            command: SignOutCommand(ref),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.0),
+              child: Text(
+                "Sign Out",
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -46,13 +44,10 @@ class ProfilePage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- ADMIN CONTROL CENTER BUTTON (ONLY FOR ADMINS) ---
+              // Admin Control Center button (only for admins)
               if (user.role == UserRole.admin) ...[
                 GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AdminDashboard()),
-                  ),
+                  onTap: () => OpenAdminDashboardCommand(context).execute(),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -126,29 +121,18 @@ class ProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _buildTierBadge(user.package),
-
               const SizedBox(height: 32),
               const ConsumptionTracker(),
               const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton(
-                  onPressed: () => UpgradePlan.show(context, user),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.black, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "Change My Plan",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+              BodyCommandButton(
+                command: UpgradePlanCommand(context, user),
+                backgroundColor: Colors.white,
+                child: const Text(
+                  "Change My Plan",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
               ),

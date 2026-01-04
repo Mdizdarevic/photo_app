@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
-
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
 
-// inside widgets/consumption_tracker.dart
-
-// inside widgets/consumption_tracker.dart
+// Users can track the current consumption in their current package
 
 class ConsumptionTracker extends ConsumerWidget {
   const ConsumptionTracker({super.key});
@@ -15,13 +12,13 @@ class ConsumptionTracker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 1. Get the LIVE data from our providers
     final postCount = ref.watch(userPostCountProvider);
-    final limit = ref.watch(packageLimitProvider); // This returns 10, 50, or null
+    final limit = ref.watch(packageLimitProvider); // This returns 20, 100, or null
     final userAsync = ref.watch(userStreamProvider);
 
     final currentTier = userAsync.value?.package ?? PackageTier.free;
     final bool isUnlimited = limit == null;
 
-    // 2. Determine the limit text (10, 50, or ∞)
+    // 2. Determine the limit text (20, 100, or ∞)
     String limitText;
     if (isUnlimited) {
       limitText = "∞";
@@ -42,7 +39,6 @@ class ConsumptionTracker extends ConsumerWidget {
                 "${currentTier.name.toUpperCase()} PLAN",
                 style: const TextStyle(fontWeight: FontWeight.bold)
             ),
-            // THIS IS THE FIX: It now uses the dynamic limitText
             Text("$postCount / $limitText"),
           ],
         ),

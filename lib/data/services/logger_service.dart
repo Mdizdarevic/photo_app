@@ -1,20 +1,32 @@
+// Nonfunctional requirements:
+// Logging of every action has to be implemented: by who, when, and what operation was
+// made – 5 points for LO3 Minimum
+
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class LoggerService {
-  // --- Singleton Pattern Implementation ---
+  // --- Singleton Design Pattern Implementation ---
+
+  // 1. Private Constructor:
+  // (_internal) makes this constructor private to this file.
+  // This prevents other classes from doing "new LoggerService()" and creating multiple instances.
   LoggerService._internal();
+
+  // 2. Private Static Instance:
+  // This holds the one and only instance of the class.
   static final LoggerService _instance = LoggerService._internal();
+
+  // 3. Factory Constructor:
+  // When someone calls LoggerService(), it doesn't create a new object; it returns the one stored in _instance.
+  // Instead of getInstance(), 'factory' is the Dart word for returning an existing instance instead of creating a new one.
   factory LoggerService() => _instance;
 
-  // --- Logging Logic ---
-  /// requirement: by who, when, and what operation was made.
   void logAction({required String userId, required String operation, String? details,}) {
-    // 1. "When" - Formatted for readability
+
     final String timestamp = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
-    // 2. Construct the log message
     final String logMessage = '''
     -----------------------------------
     [AUDIT LOG]
@@ -24,10 +36,7 @@ class LoggerService {
     DETAILS:   ${details ?? "None"}
     -----------------------------------''';
 
-    // 3. Print to the "Run" tab (Most reliable for Android Studio)
     print(logMessage);
-
-    // 4. Log to the "Logcat" tab (Searchable by name)
     developer.log(logMessage, name: 'com.uca.project.logger');
 
     FirebaseFirestore.instance.collection('audit_logs').add({

@@ -1,8 +1,6 @@
 import '../models/user_entity.dart';
 
 abstract class UserFactory {
-  /// The Factory Method to create UserEntity objects.
-  /// This centralizes the logic for role and package assignments.
   static UserEntity createUser({
     required String id,
     required String email,
@@ -14,12 +12,10 @@ abstract class UserFactory {
     // This ensures that even if Firestore is empty/wrong, this email gets Admin powers.
     UserRole effectiveRole = role;
 
-    // Replace with your actual admin email
     if (email.toLowerCase().trim() == "admin@pothole.com") {
       effectiveRole = UserRole.admin;
     }
 
-    // 2. LOGIC BY ROLE
     switch (effectiveRole) {
       case UserRole.admin:
         return UserEntity(

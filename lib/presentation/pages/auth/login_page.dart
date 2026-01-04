@@ -20,7 +20,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   PackageTier _selectedTier = PackageTier.free;
   bool _isSigningUp = false;
 
-  // 1. Helper to provide the text details
   String _getTierDescription() {
     switch (_selectedTier) {
       case PackageTier.free:
@@ -71,7 +70,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ],
                 ),
 
-                // 2. THE DYNAMIC INFO TEXT
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
@@ -118,7 +116,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           _selectedTier
                       );
                     } else {
-                      // SIGN IN MODE - ADDED THIS
+                      // SIGN IN MODE
                       user = await ref.read(authServiceProvider).signInWithEmail(
                         _emailController.text.trim(),
                         _passwordController.text,
@@ -131,7 +129,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
                       }
                     } else {
-                      // Optional: Show error message if login fails
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Authentication Failed. Check credentials.")),
@@ -150,7 +147,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               const SizedBox(height: 24),
 
-              // SOCIAL BUTTONS (Only if signing up/signing in)
+              // SOCIAL BUTTONS
               Row(
                 children: [
                   Expanded(

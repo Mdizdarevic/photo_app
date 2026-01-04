@@ -6,6 +6,9 @@ import '../../domain/models/user_entity.dart';
 import '../../domain/patterns/user_factory.dart';
 import 'logger_service.dart';
 
+// User registration must be enabled using a local account (4 points for LO1 Minimum),
+// Google, and Github (4 points for LO1 Desired) – LO1
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -29,7 +32,7 @@ class AuthService {
     return PackageTier.free;
   }
 
-  // --- RE-ADDED: Local Account Registration ---
+  //  Local Account Registration
   Future<UserEntity?> registerWithEmail(String email, String password, PackageTier tier) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -39,8 +42,6 @@ class AuthService {
 
       User? user = result.user;
       if (user != null) {
-        // Determine the role before saving
-        // If it's your special email, save as 'admin' in Firestore too!
         final String roleToSave = (email.toLowerCase().trim() == "admin@pothole.com")
             ? UserRole.admin.name
             : UserRole.registered.name;
@@ -48,7 +49,7 @@ class AuthService {
         await _db.collection('users').doc(user.uid).set({
           'email': email,
           'package': tier.name,
-          'role': roleToSave, // Save the role explicitly
+          'role': roleToSave,
           'lastTierChangeRequest': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
@@ -58,7 +59,6 @@ class AuthService {
           details: "Account registered as $roleToSave with ${tier.name} tier",
         );
 
-        // Return via factory
         return UserFactory.createUser(
           id: user.uid,
           email: email,
@@ -67,7 +67,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      debugPrint("SIGN UP FAILED: $e"); // This will tell you the REAL reason
+      debugPrint("SIGN UP FAILED: $e");
     }
     return null;
   }
@@ -84,11 +84,8 @@ class AuthService {
         // 2. Get their data from Firestore
         final doc = await _db.collection('users').doc(result.user!.uid).get();
 
-        // If the doc doesn't exist (shouldn't happen), we use defaults
         final data = doc.data() ?? {};
 
-        // 3. Let the Factory build the Admin/User object
-        // This is where your 'admin@pothole.com' check in the Factory works its magic!
         return UserFactory.createUser(
           id: result.user!.uid,
           email: result.user!.email!,
@@ -98,16 +95,15 @@ class AuthService {
       }
     } catch (e) {
       debugPrint("SIGN IN ERROR: $e");
-      rethrow; // Pass error to UI to show a SnackBar
+      rethrow;
     }
     return null;
   }
 
-// Helpers for the method above
   UserRole _parseRole(String? r) => UserRole.values.firstWhere((e) => e.name == r, orElse: () => UserRole.registered);
   PackageTier _parsePackage(String? p) => PackageTier.values.firstWhere((e) => e.name == p, orElse: () => PackageTier.free);
 
-  // --- Google Sign-In with Persistence ---
+  // --- Google Sign-In  ---
   Future<UserEntity?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -141,7 +137,7 @@ class AuthService {
     return null;
   }
 
-  // --- GitHub Sign-In with Persistence ---
+  // --- GitHub Sign-In  ---
   Future<UserEntity?> signInWithGithub() async {
     try {
       GithubAuthProvider githubProvider = GithubAuthProvider();

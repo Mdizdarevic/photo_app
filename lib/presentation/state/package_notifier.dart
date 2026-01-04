@@ -8,10 +8,8 @@ class PackageNotifier extends StateNotifier<UserPackageState> {
 
   void requestPackageChange(PackageTier newTier) {
     state = state.changePackage(newTier);
-    // Logic: Save this pending change to Firebase so it persists
   }
 
-  // Check if we need to refresh the state (call this on app start/resume)
   void refreshPackageStatus() {
     if (state is PendingPackageState) {
       final pending = state as PendingPackageState;

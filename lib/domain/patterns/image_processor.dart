@@ -11,7 +11,7 @@ class ImageProcessor {
   }
 
   Future<File> executeProcessing(File file) async {
-    if (_strategy == null) return file; // Return original if no filter selected
+    if (_strategy == null) return file;
     return await _strategy!.process(file);
   }
 }

@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// The application supports work with a registered, anonymous, and administrator type of
+// user – 8 points for LO1 Minimum
+
 enum UserRole { anonymous, registered, admin }
 
 enum PackageTier { free, pro, gold }
@@ -24,20 +27,15 @@ class UserEntity {
     this.lastTierChangeRequest,
   });
 
-  // --- ADD THIS FACTORY TO CLEAR THE RED LINE ---
   factory UserEntity.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
     return UserEntity(
       id: doc.id,
       email: data['email'] ?? '',
-      // Parsing the Enums safely
       role: _parseRole(data['role']),
       package: _parsePackage(data['package']),
-
       photosUploadedToday: data['photosUploadedToday'] ?? 0,
-
-      // Converting Firebase Timestamps to Dart DateTime
       lastUploadDate: (data['lastUploadDate'] as Timestamp?)?.toDate(),
       lastTierChangeRequest: (data['lastTierChangeRequest'] as Timestamp?)?.toDate(),
     );

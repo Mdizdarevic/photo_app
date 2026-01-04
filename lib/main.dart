@@ -7,11 +7,9 @@ import 'presentation/pages/auth/login_page.dart'; // Ensure this path is correct
 import 'presentation/core/app_theme.dart'; // Your custom theme
 
 void main() async {
-  // Required for Firebase initialization
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // This connects your code to the Firebase Project (photo-app-72886)
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -20,23 +18,21 @@ void main() async {
   }
 
   runApp(
-    // ProviderScope is required for Riverpod (Dependency Injection)
     const ProviderScope(
-      child: PhotoVaultApp(),
+      child: PhotoApp(),
     ),
   );
 }
 
-class PhotoVaultApp extends StatelessWidget {
-  const PhotoVaultApp({super.key});
+class PhotoApp extends StatelessWidget {
+  const PhotoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PhotoVault',
+      title: 'PhotoApp',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme, // Use your defined theme
-      // Starting with LoginPage fixes the red "title" lookup error
+      theme: AppTheme.lightTheme,
       home: const SplashScreen(),
     );
   }

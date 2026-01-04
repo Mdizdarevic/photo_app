@@ -31,8 +31,6 @@ class StorageService implements IStorageService {
 
   @override
   Future<List<PhotoEntity>> getAllPhotos() async {
-    // For now, return empty so it compiles.
-    // You can later add logic to fetch from Firestore.
     return [];
   }
 

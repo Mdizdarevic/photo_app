@@ -121,7 +121,6 @@ class AdminDashboard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Real-time post counter for this specific user
                 ],
               ),
             ),
@@ -209,7 +208,6 @@ class AdminDashboard extends ConsumerWidget {
   }
 }
 
-// Global Stats Tab - Refactored for clean UI
 class AdminStatsTab extends StatelessWidget {
   const AdminStatsTab({super.key});
 
@@ -278,7 +276,12 @@ class AdminStatsTab extends StatelessWidget {
   }
 }
 
-// Logic functions
+// Administrator can do everything that registered user can, and additionally – 5 points for
+// LO2 Minimum
+// o Modify the profile and packages of the user
+// o View user actions and user statistics
+// o Manage images of any user
+
 Future<Map<String, dynamic>> _getGlobalStats() async {
   final usersSnap = await FirebaseFirestore.instance.collection('users').get();
   final photosSnap = await FirebaseFirestore.instance.collection('photos').count().get();
@@ -294,7 +297,9 @@ Future<Map<String, dynamic>> _getGlobalStats() async {
 }
 
 Future<void> _updateUserByAdmin({required String targetUserId, required PackageTier newTier, required UserRole newRole, required String adminEmail}) async {
-  await FirebaseFirestore.instance.collection('users').doc(targetUserId).update({'package': newTier.name, 'role': newRole.name});
+  await FirebaseFirestore.instance.collection('users').doc(targetUserId).update(
+      {'package': newTier.name, 'role': newRole.name}
+  );
   LoggerService().logAction(userId: adminEmail, operation: "ADMIN_UPDATE_USER", details: "Changed User $targetUserId to ${newTier.name} / ${newRole.name}");
 }
 

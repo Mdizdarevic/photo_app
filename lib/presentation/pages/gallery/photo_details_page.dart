@@ -1,17 +1,13 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:dio/dio.dart';
-import 'package:gal/gal.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../data/services/logger_service.dart';
-import '../../../domain/models/photo_entity.dart';
 import '../../../di.dart';
+import '../../../domain/models/photo_entity.dart';
 import '../../../domain/models/user_entity.dart';
+import '../../../domain/patterns/hashtag_processor.dart';
+import '../../../domain/patterns/image_strategy.dart';
+import '../../../domain/patterns/photo_facade.dart';
 
 class PhotoDetailsPage extends ConsumerStatefulWidget {
   final PhotoEntity photo;
@@ -25,6 +21,8 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
   bool _isEditing = false;
   late TextEditingController _descriptionController;
   late TextEditingController _hashtagController;
+
+  final PhotoFacade _facade = PhotoFacade(); // --- FACADE INSTANCE
 
   @override
   void initState() {
@@ -40,34 +38,23 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
     super.dispose();
   }
 
-  // --- EDITING LOGIC ---
   Future<void> _saveChanges() async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) return;
+
+    final rawInput = RawUserInput(_hashtagController.text);
+    final IHashtagProcessor adapter = HashtagAdapter(rawInput);
+    final updatedTags = adapter.getFormattedTags();
+
     try {
-
-      final currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) return;
-
-      final List<String> updatedTags = _hashtagController.text
-          .split(' ')
-          .where((t) => t.isNotEmpty)
-          .map((t) => t.replaceAll('#', '')) // Clean up if user typed '#'
-          .toList();
-
-      await FirebaseFirestore.instance
-          .collection('photos')
-          .doc(widget.photo.id)
-          .update({
-        'description': _descriptionController.text,
-        'hashtags': updatedTags,
-      });
+      await _facade.saveChanges(
+        photo: widget.photo,
+        description: _descriptionController.text,
+        hashtags: updatedTags,
+        currentUser: currentUser,
+      );
 
       setState(() => _isEditing = false);
-
-      LoggerService().logAction(
-        userId: currentUser.email,
-        operation: "EDIT_POST",
-        details: "Updated description: ${_descriptionController.text} | hashtags: ${_hashtagController.text}",
-      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +70,23 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
     }
   }
 
-  // --- DOWNLOAD & FILTER LOGIC ---
+  Future<void> _deletePhoto(BuildContext context) async {
+    final currentUser = ref.read(currentUserProvider);
+
+    try {
+      await _facade.deletePhoto(photo: widget.photo, currentUser: currentUser);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Post deleted")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Delete error: $e");
+    }
+  }
+
   Future<void> _showDownloadOptions(BuildContext context) async {
     showDialog(
       context: context,
@@ -109,8 +112,9 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
   }
 
   Future<void> _processAndDownload(BuildContext context, String? filterType) async {
-    final hasAccess = await Gal.hasAccess();
-    if (!hasAccess) await Gal.requestAccess();
+    ImageProcessingStrategy? strategy;
+    if (filterType == "sepia") strategy = SepiaStrategy(); // calling strategy
+    if (filterType == "blur") strategy = BlurStrategy(); // calling strategy
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,37 +123,22 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
     }
 
     try {
-      final response = await Dio().get(
-        widget.photo.thumbnailUrl,
-        options: Options(responseType: ResponseType.bytes),
+      final file = await _facade.downloadPhoto(
+        url: widget.photo.thumbnailUrl,
+        strategy: strategy,
       );
 
-      final tempDir = await getTemporaryDirectory();
-      final path = '${tempDir.path}/photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      if (filterType == null) {
-        await File(path).writeAsBytes(response.data);
-      } else {
-        img.Image? image = img.decodeImage(Uint8List.fromList(response.data));
-        if (image != null) {
-          if (filterType == "sepia") image = img.sepia(image);
-          if (filterType == "blur") image = img.gaussianBlur(image, radius: 10);
-          await File(path).writeAsBytes(img.encodeJpg(image));
-        }
-      }
-
-      await Gal.putImage(path);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      if (mounted) {
         final label = filterType ?? 'Original';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("$label image downloaded"), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Download failed: $e")),
+        );
       }
     }
   }
@@ -159,15 +148,10 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
     final formattedDate = DateFormat.yMMMd().format(widget.photo.uploadDate);
     final currentUser = ref.watch(currentUserProvider);
 
-    // 1. Registered users can download.
     final bool isRegisteredUser = currentUser != null && currentUser.role != UserRole.anonymous;
-
-    // 2. Ownership check using EMAIL.
-    // Ensure widget.photo.authorName contains the creator's email.
     final bool isAdmin = currentUser?.role == UserRole.admin;
     final bool isOwner = isRegisteredUser &&
-        (currentUser.email?.toLowerCase().contains(widget.photo.authorName.toLowerCase()) ?? false);
-
+        (currentUser.email?.toLowerCase().split('@')[0] == widget.photo.authorName.toLowerCase());
     final bool canManage = isAdmin || isOwner;
 
     return Scaffold(
@@ -178,13 +162,11 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
         iconTheme: const IconThemeData(color: Colors.black),
         title: Text(_isEditing ? "Edit Details" : widget.photo.authorName),
         actions: [
-          // The Edit pencil ONLY shows if you are the owner (matching email)
           if (canManage)
             IconButton(
               icon: Icon(_isEditing ? Icons.close : Icons.edit),
               onPressed: () => setState(() => _isEditing = !_isEditing),
             ),
-          // Download button shows for all registered users when not editing
           if (isRegisteredUser && !_isEditing)
             IconButton(
               icon: const Icon(Icons.download_for_offline_rounded, size: 28),
@@ -198,7 +180,11 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
           children: [
             Hero(
               tag: widget.photo.id,
-              child: Image.network(widget.photo.thumbnailUrl, fit: BoxFit.cover, width: double.infinity),
+              child: Image.network(
+                  widget.photo.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -206,7 +192,6 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!_isEditing) ...[
-                    // --- VIEW MODE ---
                     _buildInfoSection("Description", widget.photo.description),
                     const SizedBox(height: 20),
                     const Text("Tags", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -216,16 +201,12 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
                       children: widget.photo.hashtags.map((tag) => Chip(label: Text("#$tag"))).toList(),
                     ),
                   ] else ...[
-                    // --- EDIT MODE ---
                     const Text("Edit Description", style: TextStyle(fontWeight: FontWeight.bold)),
                     TextField(controller: _descriptionController, maxLines: 3),
                     const SizedBox(height: 20),
                     const Text("Edit Tags (space separated)", style: TextStyle(fontWeight: FontWeight.bold)),
                     TextField(controller: _hashtagController),
                     const SizedBox(height: 30),
-
-                    // Action Buttons: Save and Delete
-                    // Inside the 'Row' under the '--- EDIT MODE ---' section
                     Row(
                       children: [
                         Expanded(
@@ -236,7 +217,6 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // DELETE BUTTON
                         IconButton(
                           onPressed: () => _deletePhoto(context),
                           icon: const Icon(Icons.delete_forever, color: Colors.red, size: 30),
@@ -254,30 +234,6 @@ class _PhotoDetailsPageState extends ConsumerState<PhotoDetailsPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _deletePhoto(BuildContext context) async {
-    final currentUser = ref.read(currentUserProvider);
-
-    try {
-      await FirebaseFirestore.instance.collection('photos').doc(widget.photo.id).delete();
-
-      // LOG THE ACTION
-      LoggerService().logAction(
-        userId: currentUser?.email ?? "Unknown",
-        operation: "DELETE_POST",
-        details: "Deleted Photo ID: ${widget.photo.id} (Author: ${widget.photo.authorName})",
-      );
-
-      if (mounted) {
-        Navigator.pop(context); // Go back to gallery
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Post deleted successfully")),
-        );
-      }
-    } catch (e) {
-      debugPrint("Delete error: $e");
-    }
   }
 
   Widget _buildInfoSection(String title, String content) {
