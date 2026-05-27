@@ -12,17 +12,10 @@ class RawUserInput {
   String getRawText() => text;
 }
 
-// 3. Adapter
-// It implements the Target interface and wraps the Adaptee.
-class HashtagAdapter implements IHashtagProcessor {
-  final RawUserInput _rawInput;
-
-  HashtagAdapter(RawUserInput rawInput) : _rawInput = rawInput;
-
-  @override
-  List<String> getFormattedTags() {
-    // Logic to convert raw String to clean List<String>
-    final rawText = _rawInput.getRawText();
+// SINGLE RESPONSIBILITY PRINCIPLE (SRP)
+// This class has one, single job: parsing raw text strings into clean arrays.
+class TextTagParser {
+  List<String> parseAndClean(String rawText) {
     return rawText
         .split(' ')
         .where((tag) => tag.isNotEmpty)
@@ -30,3 +23,39 @@ class HashtagAdapter implements IHashtagProcessor {
         .toList();
   }
 }
+
+// 3. Adapter
+// It implements the Target interface and wraps the Adaptee.
+class HashtagAdapter implements IHashtagProcessor {
+  final RawUserInput _rawInput;
+
+  // Calling parser
+  final TextTagParser _parser = TextTagParser();
+
+  HashtagAdapter(RawUserInput rawInput) : _rawInput = rawInput;
+
+  @override
+  List<String> getFormattedTags() {
+
+    final rawText = _rawInput.getRawText();
+    return _parser.parseAndClean(rawText);
+
+  }
+
+  // HashtagAdapter used to be a target interface and it also
+  // implemented raw text parsing
+  // I refactored this code so that raw text parsing is it's own
+  // separate class, so HashtagAdapter can just act as the interface
+
+  // @override
+  // List<String> getFormattedTags() {
+  //   // Logic to convert raw String to clean List<String>
+  //   final rawText = _rawInput.getRawText();
+  //   return rawText
+  //       .split(' ')
+  //       .where((tag) => tag.isNotEmpty)
+  //       .map((tag) => tag.replaceAll('#', '').trim())
+  //       .toList();
+  // }
+}
+
