@@ -23,7 +23,7 @@ final cloudProvider = Provider((ref) => CloudProvider());
 
 final tierServiceProvider = Provider((ref) => TierService());
 
-final loggerProvider = Provider((ref) => LoggerService());
+// final loggerProvider = Provider((ref) => LoggerService());
 
 final authServiceProvider = Provider((ref) => AuthService());
 
@@ -110,7 +110,7 @@ final filteredPhotosProvider = Provider<List<PhotoEntity>>((ref) {
   final allPhotos = ref.watch(photosStreamProvider).value ?? [];
   final query = ref.watch(searchProvider).toLowerCase();
   final currentUser = ref.watch(currentUserProvider);
-  final logger = ref.watch(loggerProvider);
+  // final logger = ref.watch(loggerProvider);
 
   if (query.isEmpty) return allPhotos;
   return allPhotos.where((photo) {
@@ -129,7 +129,7 @@ final userPackageProvider = StateProvider<UserPackage>((ref) => UserPackage.free
 
 final packageLimitProvider = Provider<int?>((ref) {
   final userAsync = ref.watch(userStreamProvider);
-  final logger = ref.watch(loggerProvider);
+  // final logger = ref.watch(loggerProvider);
 
   return userAsync.when(
     data: (user) {

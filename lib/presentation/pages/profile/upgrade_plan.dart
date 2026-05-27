@@ -68,12 +68,6 @@ class UpgradePlan extends ConsumerWidget {
             messenger.showSnackBar(
               SnackBar(content: Text("Success! Plan changed to ${tier.name}")),
             );
-
-            LoggerService().logAction(
-              userId: user.email,
-              operation: "CHANGE_PACKAGE",
-              details: "Plan changed to ${tier.name}"
-            );
           }
         },
     );

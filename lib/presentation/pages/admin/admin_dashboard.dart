@@ -300,7 +300,6 @@ Future<void> _updateUserByAdmin({required String targetUserId, required PackageT
   await FirebaseFirestore.instance.collection('users').doc(targetUserId).update(
       {'package': newTier.name, 'role': newRole.name}
   );
-  LoggerService().logAction(userId: adminEmail, operation: "ADMIN_UPDATE_USER", details: "Changed User $targetUserId to ${newTier.name} / ${newRole.name}");
 }
 
 Widget _buildDropdown<T extends Enum>({required String label, required T value, required List<T> items, required ValueChanged<T?> onChanged}) {

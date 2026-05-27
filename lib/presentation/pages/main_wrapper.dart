@@ -58,11 +58,6 @@ class _MainWrapperState extends ConsumerState<MainWrapper> {
                     if (val.isNotEmpty) {
                       final currentUser = ref.read(currentUserProvider);
 
-                      LoggerService().logAction(
-                        userId: currentUser?.email ?? "Guest",
-                        operation: "SEARCH_GALLERY",
-                        details: "Query: $val",
-                      );
                     }
                   },
                   decoration: InputDecoration(

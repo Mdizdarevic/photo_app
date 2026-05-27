@@ -4,7 +4,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/models/user_entity.dart';
 import '../../domain/patterns/user_factory.dart';
-import 'logger_service.dart';
 
 // User registration must be enabled using a local account (4 points for LO1 Minimum),
 // Google, and Github (4 points for LO1 Desired) – LO1
@@ -52,12 +51,6 @@ class AuthService {
           'role': roleToSave,
           'lastTierChangeRequest': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-
-        LoggerService().logAction(
-          userId: email,
-          operation: "USER_SIGN_UP",
-          details: "Account registered as $roleToSave with ${tier.name} tier",
-        );
 
         return UserFactory.createUser(
           id: user.uid,
@@ -119,12 +112,6 @@ class AuthService {
       if (result.user != null) {
         final savedTier = await _fetchUserTier(result.user!.uid);
 
-        LoggerService().logAction(
-          userId: result.user!.email ?? "Social User",
-          operation: "USER_SIGN_IN",
-          details: "Social login via ${result.credential?.providerId ?? 'Provider'}",
-        );
-
         return UserFactory.createUser(
           id: result.user!.uid,
           email: result.user!.email ?? "",
@@ -145,12 +132,6 @@ class AuthService {
       if (result.user != null) {
         final savedTier = await _fetchUserTier(result.user!.uid);
 
-        LoggerService().logAction(
-          userId: result.user!.email ?? "Social User",
-          operation: "USER_SIGN_IN",
-          details: "Social login via ${result.credential?.providerId ?? 'Provider'}",
-        );
-
         return UserFactory.createUser(
           id: result.user!.uid,
           email: result.user!.email ?? "github_user@app.com",
@@ -166,12 +147,6 @@ class AuthService {
   Future<UserEntity?> signInAnonymously() async {
     try {
       UserCredential result = await _auth.signInAnonymously();
-
-      LoggerService().logAction(
-        userId: result.user!.uid, // Use UID as they have no email
-        operation: "USER_SIGN_IN_ANON",
-        details: "Guest access granted",
-      );
 
       return UserFactory.createUser(
         id: result.user!.uid,
@@ -189,10 +164,5 @@ class AuthService {
     await _auth.signOut();
     await GoogleSignIn().signOut();
 
-    LoggerService().logAction(
-      userId: userEmail ?? "Unknown User",
-      operation: "USER_SIGN_OUT",
-      details: "User manually signed out",
-    );
   }
 }

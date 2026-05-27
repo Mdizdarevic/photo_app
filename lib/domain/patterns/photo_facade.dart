@@ -6,14 +6,12 @@ import 'package:dio/dio.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
-import '../../data/services/logger_service.dart';
 import '../models/photo_entity.dart';
 import '../models/user_entity.dart';
 import 'image_strategy.dart';
 
 // Facade to simplify photo operations
 class PhotoFacade {
-  final LoggerService _logger = LoggerService();
 
   // Save changes to photo description & hashtags
   Future<void> saveChanges({
@@ -33,12 +31,6 @@ class PhotoFacade {
       'description': description,
       'hashtags': hashtags,
     });
-
-    _logger.logAction(
-      userId: currentUser.email,
-      operation: "EDIT_POST",
-      details: "Updated description: $description | hashtags: ${hashtags.join(' ')}",
-    );
   }
 
   // Delete photo
@@ -48,12 +40,6 @@ class PhotoFacade {
   }) async {
     try {
       await FirebaseFirestore.instance.collection('photos').doc(photo.id).delete();
-
-      _logger.logAction(
-        userId: currentUser?.email ?? "Unknown",
-        operation: "DELETE_POST",
-        details: "Deleted Photo ID: ${photo.id} (Author: ${photo.authorName})",
-      );
     } catch (e) {
       rethrow;
     }

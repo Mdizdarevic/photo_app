@@ -95,12 +95,6 @@ class _UploadPageState extends ConsumerState<UploadPage> {
         'tier': user.package.toString().split('.').last,
       });
 
-      LoggerService().logAction(
-        userId: user.email,
-        operation: "CREATE_POST",
-        details: "Uploaded description: ${_descriptionController.text}",
-      );
-
       if (!mounted) return;
 
       Navigator.pop(context);
