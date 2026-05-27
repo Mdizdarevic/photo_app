@@ -42,7 +42,7 @@ class AuthService {
 
       User? user = result.user;
       if (user != null) {
-        final String roleToSave = (email.toLowerCase().trim() == "admin@pothole.com")
+        final String roleToSave = (email.toLowerCase().trim() == "admin@admin.com")
             ? UserRole.admin.name
             : UserRole.registered.name;
 
