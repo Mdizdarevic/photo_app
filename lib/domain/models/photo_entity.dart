@@ -26,7 +26,14 @@ class PhotoEntity {
       authorName: data['authorName'] ?? 'Unknown',
       thumbnailUrl: data['thumbnailUrl'] ?? '',
       hashtags: List<String>.from(data['hashtags'] ?? []),
-      uploadDate: (data['uploadDate'] as Timestamp).toDate(),
+      uploadDate: data['uploadDate'] != null
+          ? (data['uploadDate'] as Timestamp).toDate()
+          : DateTime.now(),
     );
+  }
+
+  // Below is what I added for Functional Programming (Map)
+  static List<PhotoEntity> fromFirestoreList(List<DocumentSnapshot> docs) {
+    return docs.map((doc) => PhotoEntity.fromFirestore(doc)).toList();
   }
 }
