@@ -100,7 +100,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _buildTextField("Password", _passwordController, isObscure: true),
               const SizedBox(height: 32),
 
-              // MAIN BUTTON
+              // MAIN BUTTON (WIRED FOR AOP LOGS)
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -109,15 +109,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     UserEntity? user;
 
                     if (_isSigningUp) {
-                      // SIGN UP MODE
-                      user = await ref.read(authServiceProvider).registerWithEmail(
+                      // SIGN UP MODE -> Routed through Aop Auth Proxy Provider
+                      user = await ref.read(aopAuthServiceProvider).registerWithEmail(
                           _emailController.text.trim(),
                           _passwordController.text,
                           _selectedTier
                       );
                     } else {
-                      // SIGN IN MODE
-                      user = await ref.read(authServiceProvider).signInWithEmail(
+                      // SIGN IN MODE -> Routed through Aop Auth Proxy Provider
+                      user = await ref.read(aopAuthServiceProvider).signInWithEmail(
                         _emailController.text.trim(),
                         _passwordController.text,
                       );
@@ -147,13 +147,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               const SizedBox(height: 24),
 
-              // SOCIAL BUTTONS
+              // SOCIAL BUTTONS (WIRED FOR AOP LOGS)
               Row(
                 children: [
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        final user = await ref.read(authServiceProvider).signInWithGoogle();
+                        // GOOGLE SIGN IN -> Routed through Aop Auth Proxy Provider
+                        final user = await ref.read(aopAuthServiceProvider).signInWithGoogle();
                         if (user != null) {
                           ref.read(currentUserProvider.notifier).state = user;
                           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
@@ -175,7 +176,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        final user = await ref.read(authServiceProvider).signInWithGithub();
+                        // GITHUB SIGN IN -> Routed through Aop Auth Proxy Provider
+                        final user = await ref.read(aopAuthServiceProvider).signInWithGithub();
                         if (user != null) {
                           ref.read(currentUserProvider.notifier).state = user;
                           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainWrapper()));
@@ -214,10 +216,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MainWrapper()),
-                  ),
+                  onPressed: () async {
+                    // ANONYMOUS GUEST SIGN IN -> Routed through Aop Auth Proxy Provider
+                    final user = await ref.read(aopAuthServiceProvider).signInAnonymously();
+                    if (user != null) {
+                      ref.read(currentUserProvider.notifier).state = user;
+                    }
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MainWrapper()),
+                      );
+                    }
+                  },
                   child: const Text("Continue as Guest", style: TextStyle(color: Colors.grey)),
                 ),
               ),

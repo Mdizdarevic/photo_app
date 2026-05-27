@@ -25,8 +25,6 @@ final tierServiceProvider = Provider((ref) => TierService());
 
 // final loggerProvider = Provider((ref) => LoggerService());
 
-final authServiceProvider = Provider((ref) => AuthService());
-
 final storageServiceProvider = Provider<IStorageService>((ref) {
   final db = ref.watch(localDbProvider);
   final cloud = ref.watch(cloudProvider);
@@ -167,4 +165,27 @@ final userStreamProvider = StreamProvider<UserEntity?>((ref) {
       .doc(authUser.uid)
       .snapshots()
       .map((snapshot) => snapshot.exists ? UserEntity.fromFirestore(snapshot) : null);
+});
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});
+
+final auditAspectProvider = Provider<AuditAspect>((ref) {
+  return AuditAspect();
+});
+
+final aopAuthServiceProvider = Provider<IAopAuthService>((ref) {
+  final aspect = ref.watch(auditAspectProvider);
+  return AuthServiceAopProxy(AopAuthService(), aspect);
+});
+
+final packageServiceProvider = Provider<IPackageService>((ref) {
+  final aspect = ref.watch(auditAspectProvider);
+  return PackageServiceAopProxy(PackageService(), aspect);
+});
+
+final userServiceProvider = Provider<IUserService>((ref) {
+  final aspect = ref.watch(auditAspectProvider);
+  return UserServiceAopProxy(UserService(), aspect);
 });
