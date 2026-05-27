@@ -2,8 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import '../../../di.dart';
 import '../../../domain/models/user_entity.dart';
-
-// Users can track the current consumption in their current package
+import '../../../domain/models/package_config.dart';
 
 class ConsumptionTracker extends ConsumerWidget {
   const ConsumptionTracker({super.key});
@@ -12,22 +11,28 @@ class ConsumptionTracker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 1. Get the LIVE data from our providers
     final postCount = ref.watch(userPostCountProvider);
-    final limit = ref.watch(packageLimitProvider); // This returns 20, 100, or null
     final userAsync = ref.watch(userStreamProvider);
 
     final currentTier = userAsync.value?.package ?? PackageTier.free;
-    final bool isUnlimited = limit == null;
 
-    // 2. Determine the limit text (20, 100, or ∞)
-    String limitText;
-    if (isUnlimited) {
-      limitText = "∞";
-    } else {
-      limitText = limit.toString();
-    }
+    // OPEN/CLOSE PRINCIPLE: Map the enum to its dedicated independent strategy object
+    // This removes the need for hardcoded switch/if statements inside the UI.
+    final Map<PackageTier, PackageStrategy> packageStrategies = {
+      PackageTier.free: FreePackageStrategy(),
+      PackageTier.pro: ProPackageStrategy(),
+      PackageTier.gold: GoldPackageStrategy(),
+    };
 
-    // 3. Calculate progress bar percentage
-    double progress = isUnlimited ? 0.0 : (postCount / limit).clamp(0.0, 1.0);
+    final activeStrategy = packageStrategies[currentTier] ?? FreePackageStrategy();
+    final config = PackageConfig.fromStrategy(activeStrategy);
+
+    // Figuring out the limit text dynamically using OCP states
+    final bool isUnlimited = currentTier == PackageTier.gold;
+    final String limitText = isUnlimited ? "∞" : config.dailyUploadLimit.toString();
+
+    double progress = isUnlimited
+        ? 0.0
+        : (postCount / config.dailyUploadLimit).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,7 +51,9 @@ class ConsumptionTracker extends ConsumerWidget {
         LinearProgressIndicator(
           value: isUnlimited ? 1.0 : progress, // Gold shows full/infinite bar
           backgroundColor: Colors.grey[200],
-          color: isUnlimited ? Colors.amber : (progress >= 1.0 ? Colors.red : Colors.black),
+          color: isUnlimited
+              ? Colors.amber
+              : (progress >= 1.0 ? Colors.red : Colors.black),
           minHeight: 8,
         ),
       ],
