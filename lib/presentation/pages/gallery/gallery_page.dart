@@ -42,7 +42,6 @@ class GalleryPage extends ConsumerWidget {
         ),
           error: (err, stack) {
             // METRICS INTEGRATION: Record database failure state
-            // Since the stream failed to connect or fetch, update our operational log tracking
             MetricsService().recordDbWrite(false);
             MetricsService().printHealthDashboard();
 
@@ -52,7 +51,6 @@ class GalleryPage extends ConsumerWidget {
           },
         data: (_) {
           // METRICS INTEGRATION: Record successful database delivery state
-          // Every time a healthy list payload maps through, append a successful operation log
           MetricsService().recordDbWrite(true);
           MetricsService().printHealthDashboard();
 
