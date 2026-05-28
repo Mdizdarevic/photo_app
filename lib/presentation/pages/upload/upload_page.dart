@@ -62,6 +62,7 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     try {
       validatorChain.handle(request);
     } catch (e) {
+      ref.read(metricsServiceProvider).incrementQuotaExhaustion();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -77,6 +78,9 @@ class _UploadPageState extends ConsumerState<UploadPage> {
 
       String fileName =
           'pothole_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      double sizeInMb = _imageFile!.lengthSync().toDouble() / (1024 * 1024);
+      await ref.read(performanceImageProvider).optimizeAndUploadImage(fileName, sizeInMb);
 
       final String downloadUrl = await storageService.uploadPhoto(
         _imageFile!,

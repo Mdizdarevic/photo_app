@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../../data/datasources/image_proxy.dart';
+import '../../../data/services/metrics_service.dart';
 import '../../../di.dart';
 import '../../widgets/photo_component.dart';
 import 'photo_details_page.dart';
@@ -39,10 +40,22 @@ class GalleryPage extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: Colors.black),
         ),
-        error: (err, stack) => Center(
-          child: Text("Error: $err"),
-        ),
+          error: (err, stack) {
+            // METRICS INTEGRATION: Record database failure state
+            // Since the stream failed to connect or fetch, update our operational log tracking
+            MetricsService().recordDbWrite(false);
+            MetricsService().printHealthDashboard();
+
+            return Center(
+              child: Text("Error: $err"),
+            );
+          },
         data: (_) {
+          // METRICS INTEGRATION: Record successful database delivery state
+          // Every time a healthy list payload maps through, append a successful operation log
+          MetricsService().recordDbWrite(true);
+          MetricsService().printHealthDashboard();
+
           if (filteredPhotos.isEmpty) {
             return const Center(
               child: Text(

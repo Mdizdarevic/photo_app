@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/models/user_entity.dart';
 import '../../../data/services/auth_service.dart';
+import 'metrics_service.dart'; // 🟢 Added import to access PerformanceAspect
 
 class AuditAspect {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -128,12 +129,15 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<UserEntity?> registerWithEmail(String email, String password, PackageTier tier) async {
     const String operation = "CREATE_ACCOUNT";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation"); // 🟢 Start Perf Stopwatch
     try {
       final result = await _target.registerWithEmail(email, password, tier);
       _aspect.afterReturningAdvice(email, operation, result);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation"); // 🟢 Log Success Perf
       return result;
     } catch (error) {
       _aspect.afterThrowingAdvice(email, operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error); // 🟢 Log Error Perf
       rethrow;
     }
   }
@@ -142,12 +146,15 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<UserEntity?> signInWithEmail(String email, String password) async {
     const String operation = "USER_LOGIN_EMAIL";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation"); // 🟢 Start Perf Stopwatch
     try {
       final result = await _target.signInWithEmail(email, password);
       _aspect.afterReturningAdvice(email, operation, result);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation"); // 🟢 Log Success Perf
       return result;
     } catch (error) {
       _aspect.afterThrowingAdvice(email, operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error); // 🟢 Log Error Perf
       rethrow;
     }
   }
@@ -156,12 +163,15 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<UserEntity?> signInWithGoogle() async {
     const String operation = "USER_LOGIN_GOOGLE";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation"); // 🟢 Start Perf Stopwatch
     try {
       final result = await _target.signInWithGoogle();
       _aspect.afterReturningAdvice(result?.email ?? "GoogleUser", operation, result);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation"); // 🟢 Log Success Perf
       return result;
     } catch (error) {
       _aspect.afterThrowingAdvice("Unknown", operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error); // 🟢 Log Error Perf
       rethrow;
     }
   }
@@ -170,12 +180,15 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<UserEntity?> signInWithGithub() async {
     const String operation = "USER_LOGIN_GITHUB";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation");
     try {
       final result = await _target.signInWithGithub();
       _aspect.afterReturningAdvice(result?.email ?? "GithubUser", operation, result);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation");
       return result;
     } catch (error) {
       _aspect.afterThrowingAdvice("Unknown", operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error);
       rethrow;
     }
   }
@@ -184,12 +197,15 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<UserEntity?> signInAnonymously() async {
     const String operation = "USER_LOGIN_ANONYMOUS";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation"); // 🟢 Start Perf Stopwatch
     try {
       final result = await _target.signInAnonymously();
       _aspect.afterReturningAdvice("guest@app.com", operation, result);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation"); // 🟢 Log Success Perf
       return result;
     } catch (error) {
       _aspect.afterThrowingAdvice("Guest", operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error); // 🟢 Log Error Perf
       rethrow;
     }
   }
@@ -198,11 +214,14 @@ class AuthServiceAopProxy implements IAopAuthService {
   Future<void> signOut(String fallbackEmail) async {
     const String operation = "USER_SIGN_OUT";
     _aspect.beforeAdvice(operation);
+    PerformanceAspect().beforeAdvice("AUTH_$operation"); // 🟢 Start Perf Stopwatch
     try {
       await _target.signOut(fallbackEmail);
       _aspect.afterReturningAdvice(fallbackEmail, operation, null);
+      PerformanceAspect().afterReturningAdvice("AUTH_$operation"); // 🟢 Log Success Perf
     } catch (error) {
       _aspect.afterThrowingAdvice(fallbackEmail, operation, error);
+      PerformanceAspect().afterThrowingAdvice("AUTH_$operation", error); // 🟢 Log Error Perf
       rethrow;
     }
   }

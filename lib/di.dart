@@ -14,7 +14,7 @@ import 'domain/models/photo_entity.dart';
 import 'domain/models/user_entity.dart';
 import 'domain/patterns/image_processor.dart';
 import 'data/services/tier_service.dart';
-
+import 'data/services/metrics_service.dart';
 
 
 final localDbProvider = Provider((ref) => LocalDatabase());
@@ -167,6 +167,7 @@ final userStreamProvider = StreamProvider<UserEntity?>((ref) {
       .map((snapshot) => snapshot.exists ? UserEntity.fromFirestore(snapshot) : null);
 });
 
+// LOGGING ASPECT PROVIDERS
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
@@ -176,8 +177,10 @@ final auditAspectProvider = Provider<AuditAspect>((ref) {
 });
 
 final aopAuthServiceProvider = Provider<IAopAuthService>((ref) {
-  final aspect = ref.watch(auditAspectProvider);
-  return AuthServiceAopProxy(AopAuthService(), aspect);
+  final auditAspect = AuditAspect();
+  final baseService = AopAuthService();
+
+  return AuthServiceAopProxy(baseService, auditAspect);
 });
 
 final packageServiceProvider = Provider<IPackageService>((ref) {
@@ -189,3 +192,20 @@ final userServiceProvider = Provider<IUserService>((ref) {
   final aspect = ref.watch(auditAspectProvider);
   return UserServiceAopProxy(UserService(), aspect);
 });
+// --- END OF LOGGING ASPECT PROVIDERS
+
+// METRICS ASPECT PROVIDERS
+final metricsServiceProvider = Provider<MetricsService>((ref) {
+  return MetricsService();
+});
+
+final performanceDbProvider = Provider<IPerformanceDatabaseService>((ref) {
+  final baseService = PerformanceDatabaseService();
+  return DatabasePerformanceProxy(baseService);
+});
+
+final performanceImageProvider = Provider<IPerformanceImageService>((ref) {
+  final baseService = PerformanceImageService();
+  return ImagePerformanceProxy(baseService);
+});
+// --- END OF METRICS ASPECT PROVIDERS
