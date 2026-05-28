@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/models/user_entity.dart';
 import '../../../data/services/auth_service.dart';
-import 'metrics_service.dart'; // 🟢 Added import to access PerformanceAspect
+import 'metrics_service.dart';
 
 class AuditAspect {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -119,8 +119,11 @@ class AopAuthService implements IAopAuthService {
   }
 }
 
+// DEPENDENCY INVERSION PRINCIPLE below
+// High-level code shouldn’t talk directly to low-level code.
+// They should talk through a middleman (an abstract interface)
 class AuthServiceAopProxy implements IAopAuthService {
-  final IAopAuthService _target;
+  final IAopAuthService _target; // this abstraction is the DIP middleman
   final AuditAspect _aspect;
 
   AuthServiceAopProxy(this._target, this._aspect);
