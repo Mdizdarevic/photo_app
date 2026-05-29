@@ -76,7 +76,7 @@ STATUS:      ONLINE
 [SYSTEM CORE HEALTH METRICS]
 1. Active Session Time:     ${activeSessionDurationSeconds}s
 2. Avg Auth Latency:        ${averageAuthLatencyMs.toStringAsFixed(1)}ms
-3. Firestore Write Success: ${dbWriteSuccessRate.toStringAsFixed(1)}% ($_successfulDbWrites/${_successfulDbWrites + _failedDbWrites})
+3. Firestore Write Success: ${dbWriteSuccessRate.toStringAsFixed(1)}% 
 4. Image Processing Speed:  ${imageThroughputMBs.toStringAsFixed(2)} MB/s
 5. Tier Package Breaches:   $quotaExhaustionCount times encountered
 =================================================================

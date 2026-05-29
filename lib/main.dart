@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:photo_app/presentation/pages/profile/consumption_tracker.dart';
 import 'package:photo_app/presentation/pages/splash_screen.dart';
-import 'firebase_options.dart'; // The file you  just generated
-import 'presentation/pages/auth/login_page.dart'; // Ensure this path is correct
-import 'presentation/core/app_theme.dart'; // Your custom theme
+import 'di.dart';
+import 'domain/models/user_entity.dart';
+import 'firebase_options.dart';
+import 'presentation/pages/auth/login_page.dart';
+import 'presentation/core/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,3 +40,26 @@ class PhotoApp extends StatelessWidget {
     );
   }
 }
+
+// void main() {
+//   runApp(
+//     ProviderScope(
+//       overrides: [
+//         userPostCountProvider.overrideWith((ref) => 2),
+//         userStreamProvider.overrideWith((ref) => Stream.value(
+//             UserEntity(id: '1', email: 'test@app.com', role: UserRole.registered, package: PackageTier.free)
+//         )),
+//       ],
+//       child: const MaterialApp(
+//         home: Scaffold(
+//           body: Center(
+//             child: Padding(
+//               padding: EdgeInsets.all(24.0),
+//               child: ConsumptionTracker(),
+//             ),
+//           ),
+//         ),
+//       ),
+//     ),
+//   );
+// }
