@@ -21,17 +21,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isSigningUp = false;
 
   String _getTierDescription() {
-    switch (_selectedTier) {
-      case PackageTier.free:
-        return "Free: 3 posts/day, JPG format, and standard resizing.";
-      case PackageTier.pro:
-        return "Pro: 20 posts/day, PNG/JPG support, and custom photo filters.";
-      case PackageTier.gold:
-        return "Gold: Unlimited posts, max resolution, and full creative control.";
-      default:
-        return "";
-    }
+    final tiers = [
+      {'tier': PackageTier.free, 'desc': "Free: 3 posts/day, JPG format, and standard resizing."},
+      {'tier': PackageTier.pro, 'desc': "Pro: 20 posts/day, PNG/JPG support, and custom photo filters."},
+      {'tier': PackageTier.gold, 'desc': "Gold: Unlimited posts, max resolution, and full creative control."},
+    ];
+
+    // Functional programming filter using .where()
+    final matchedTier = tiers.where((t) => t['tier'] == _selectedTier).firstOrNull;
+
+    return matchedTier != null ? matchedTier['desc'] as String : "";
   }
+
+  // String _getTierDescription() {
+  //   switch (_selectedTier) {
+  //     case PackageTier.free:
+  //       return "Free: 3 posts/day, JPG format, and standard resizing.";
+  //     case PackageTier.pro:
+  //       return "Pro: 20 posts/day, PNG/JPG support, and custom photo filters.";
+  //     case PackageTier.gold:
+  //       return "Gold: Unlimited posts, max resolution, and full creative control.";
+  //     default:
+  //       return "";
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
