@@ -24,6 +24,7 @@ class _UploadPageState extends ConsumerState<UploadPage> {
   final _descriptionController = TextEditingController();
   final _hashtagController = TextEditingController();
 
+  // Functional Programming - FILTER .where()
   List<String> _parseHashtags(String input) {
     if (input.isEmpty) return [];
     return input
