@@ -3,6 +3,8 @@ import 'user_entity.dart';
 
 // This is the OPEN/CLOSE PRINCIPLE (OCP) base layer
 // This class is now CLOSED for modification.
+
+// LISKOV SUBSTITUTION PRINCIPLE
 abstract class PackageStrategy {
   PackageTier get tier;
   int get dailyUploadLimit;
