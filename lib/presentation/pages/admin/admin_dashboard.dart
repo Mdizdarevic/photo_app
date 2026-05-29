@@ -64,7 +64,10 @@ class AdminDashboard extends ConsumerWidget {
           return const Center(child: CircularProgressIndicator(color: Colors.black));
         }
 
-        final users = snapshot.data!.docs.map((doc) => UserEntity.fromFirestore(doc)).toList();
+        // Functional Programming - Mapping
+        final users = snapshot.data!.docs.map(
+                (doc) => UserEntity.fromFirestore(doc)
+        ).toList();
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -286,8 +289,11 @@ Future<Map<String, dynamic>> _getGlobalStats() async {
   final usersSnap = await FirebaseFirestore.instance.collection('users').get();
   final photosSnap = await FirebaseFirestore.instance.collection('photos').count().get();
   int totalUsers = usersSnap.docs.length;
+
+  // Functional Programming - FILTER .where()
   int proUsers = usersSnap.docs.where((doc) => doc['package'] == 'pro').length;
   int goldUsers = usersSnap.docs.where((doc) => doc['package'] == 'gold').length;
+
   return {
     'totalUsers': totalUsers,
     'totalPhotos': photosSnap.count ?? 0,
