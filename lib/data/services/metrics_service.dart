@@ -24,7 +24,7 @@ class MetricsService {
   int get activeSessionDurationSeconds => DateTime.now().difference(_appLaunchTime).inSeconds;
 
   // 2. System Metric: Auth Latency Tracker
-  // Measures the network response delay (speed) of authentication events
+  // Measures the response time of authentication events
   void recordAuthLatency(int milliseconds) => _authLatenciesMs.add(milliseconds);
 
   double get averageAuthLatencyMs {
@@ -58,8 +58,8 @@ class MetricsService {
     return _totalProcessedMegabytes / _totalProcessingTimeSeconds;
   }
 
-  // 5. System Metric: Quota Exhaustion Frequency
-  // Measures which users reached their package limits
+  // 5. System Metric: Tier Package Breaches
+  // Measures how many times restricted users hit their subscription limits
   void incrementQuotaExhaustion() => _quotaExhaustionCount++;
   int get quotaExhaustionCount => _quotaExhaustionCount;
 
@@ -122,12 +122,10 @@ class PerformanceAspect {
         _metrics.recordAuthLatency(elapsedMs);
       }
 
-      // Intercept 1: Automate write track updates
       if (operation.contains("FIRESTORE_WRITE")) {
         _metrics.recordDbWrite(true);
       }
 
-      // Intercept 2: Automate Image processing speeds
       if (operation.contains("PROCESS_IMAGE") && imageSizeMb != null) {
         _metrics.recordImageProcessing(imageSizeMb, totalSeconds);
       }
@@ -141,20 +139,17 @@ class PerformanceAspect {
       final int elapsedMs = watch.elapsedMilliseconds;
       _timers.remove(operation);
 
-      // Intercept Auth failures to calculate true user connection attempt lag
       if (operation.contains("AUTH")) {
         _metrics.recordAuthLatency(elapsedMs);
       }
     }
 
-    // Intercept 3: Automate health reduction
     if (operation.contains("FIRESTORE_WRITE")) {
       _metrics.recordDbWrite(false);
     }
   }
 }
 
-// Intercepting Firestore writes for db health
 abstract interface class IPerformanceDatabaseService {
   Future<void> saveDocument(String path, String docId, Map<String, dynamic> data);
 }
@@ -186,7 +181,6 @@ class DatabasePerformanceProxy implements IPerformanceDatabaseService {
   }
 }
 
-// Intercepting image retrieval for speed
 abstract interface class IPerformanceImageService {
   Future<void> optimizeAndUploadImage(String photoId, double sizeMb);
 }

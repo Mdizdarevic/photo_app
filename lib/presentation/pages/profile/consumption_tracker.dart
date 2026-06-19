@@ -15,7 +15,7 @@ class ConsumptionTracker extends ConsumerWidget {
 
     final currentTier = userAsync.value?.package ?? PackageTier.free;
 
-    // OPEN/CLOSE PRINCIPLE: Map the enum to its dedicated independent strategy object
+    // OPEN/CLOSE PRINCIPLE: Maps below enum objects to their independent strategy object
     // This removes the need for hardcoded switch/if statements inside the UI.
     final Map<PackageTier, PackageStrategy> packageStrategies = {
       PackageTier.free: FreePackageStrategy(),

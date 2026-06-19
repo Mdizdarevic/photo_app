@@ -5,6 +5,7 @@ import 'user_entity.dart';
 // This class is now CLOSED for modification.
 
 // LISKOV SUBSTITUTION PRINCIPLE
+// You can swap a parent class with any of its child classes
 abstract class PackageStrategy {
   PackageTier get tier;
   int get dailyUploadLimit;

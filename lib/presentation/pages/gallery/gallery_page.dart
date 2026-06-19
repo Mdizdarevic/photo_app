@@ -75,7 +75,7 @@ class GalleryPage extends ConsumerWidget {
             itemBuilder: (context, index) {
               final photo = filteredPhotos[index];
 
-              // ---- PROXY + DECORATOR PATTERN ----
+              // PROXY + DECORATOR PATTERN 
               PhotoComponent basePhoto = ImageProxy(
                 imageUrl: photo.thumbnailUrl,
                 onTap: () {
@@ -91,14 +91,11 @@ class GalleryPage extends ConsumerWidget {
                 },
               );
 
-              // 2. Apply decorators
               PhotoComponent decoratedPhoto = BorderDecorator(
                 CheckmarkDecorator(basePhoto, isSelected: selectedId == photo.id),
                 isSelected: selectedId == photo.id,
               );
 
-
-              // 3. Render
               return Hero(
                 tag: photo.id,
                 child: SizedBox(

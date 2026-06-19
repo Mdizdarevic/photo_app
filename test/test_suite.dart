@@ -13,7 +13,7 @@ import 'package:photo_app/di.dart';
 
 void main() {
 
-  // CATEGORY 1: UNIT TESTS (2 Tests)
+  // CATEGORY 1: UNIT TESTS (3 Tests)
 
   group('CATEGORY 1: UNIT TESTS', () {
 
@@ -21,18 +21,16 @@ void main() {
       final strategy = FreePackageStrategy();
       final config = PackageConfig.fromStrategy(strategy);
 
-      // Asserts directly against the AppConstants file
       expect(config.dailyUploadLimit, equals(AppConstants.freeDailyLimit),
-          reason: 'Architecture Defect: Free tier quota mapping must match AppConstants configuration.');
+          reason: 'Free tier quota mapping must match AppConstants configuration.');
     });
 
     test('2. ProPackageStrategy maps correctly to the daily upload limit found in AppConstants', () {
       final strategy = ProPackageStrategy();
       final config = PackageConfig.fromStrategy(strategy);
 
-      // Asserts directly against the AppConstants file
       expect(config.dailyUploadLimit, equals(AppConstants.proDailyLimit),
-          reason: 'Architecture Defect: Pro tier quota mapping must match AppConstants configuration.');
+          reason: 'Pro tier quota mapping must match AppConstants configuration.');
     });
 
     test('3. Testing if CopyWith correctly guarantees that UserEntity keeps its immutability', () {
@@ -60,7 +58,7 @@ void main() {
     test('4. Testing if Chain of Responsibility Validation Chain correctly stops if there is no image', () {
 
       final brokenRequest = UploadRequest(
-        imageFile: null, // Null file violates the first link in the validation chain
+        imageFile: null, // Null file shoudl violate the first link in the validation chain
         user: UserEntity(
             id: 'u1',
             email: 'user@app.com',
@@ -74,7 +72,6 @@ void main() {
         ..setNext(UserValidator())
         ..setNext(TextValidator());
 
-      // Asserts that my pattern successfully throws exceptions when prerequisites are missing
       expect(() => validatorChain.handle(brokenRequest), throwsA(isA<Exception>()));
     });
   });

@@ -113,7 +113,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _buildTextField("Password", _passwordController, isObscure: true),
               const SizedBox(height: 32),
 
-              // MAIN BUTTON (WIRED FOR AOP LOGS)
+              
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -122,14 +122,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     UserEntity? user;
 
                     if (_isSigningUp) {
-                      // SIGN UP MODE -> Routed through Aop Auth Proxy Provider
+                      
                       user = await ref.read(aopAuthServiceProvider).registerWithEmail(
                           _emailController.text.trim(),
                           _passwordController.text,
                           _selectedTier
                       );
                     } else {
-                      // SIGN IN MODE -> Routed through Aop Auth Proxy Provider
+                      
                       user = await ref.read(aopAuthServiceProvider).signInWithEmail(
                         _emailController.text.trim(),
                         _passwordController.text,
@@ -160,13 +160,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               const SizedBox(height: 24),
 
-              // SOCIAL BUTTONS (WIRED FOR AOP LOGS)
               Row(
                 children: [
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        // GOOGLE SIGN IN -> Routed through Aop Auth Proxy Provider
+                        // GOOGLE SIGN IN 
                         final user = await ref.read(aopAuthServiceProvider).signInWithGoogle();
                         if (user != null) {
                           ref.read(currentUserProvider.notifier).state = user;
@@ -189,7 +188,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        // GITHUB SIGN IN -> Routed through Aop Auth Proxy Provider
+                        // GITHUB SIGN IN 
                         final user = await ref.read(aopAuthServiceProvider).signInWithGithub();
                         if (user != null) {
                           ref.read(currentUserProvider.notifier).state = user;
@@ -230,7 +229,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               Center(
                 child: TextButton(
                   onPressed: () async {
-                    // ANONYMOUS GUEST SIGN IN -> Routed through Aop Auth Proxy Provider
+                    // ANONYMOUS GUEST SIGN IN
                     final user = await ref.read(aopAuthServiceProvider).signInAnonymously();
                     if (user != null) {
                       ref.read(currentUserProvider.notifier).state = user;

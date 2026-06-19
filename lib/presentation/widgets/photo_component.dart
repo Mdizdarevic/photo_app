@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-// 1. Component Interface
+// Component Interface
 abstract class PhotoComponent {
   Widget render();
 }
 
-// 2. Concrete Component
+// Concrete Component
 class BasePhoto implements PhotoComponent {
   final String imageUrl;
   final VoidCallback onTap;
@@ -29,7 +29,7 @@ class BasePhoto implements PhotoComponent {
   }
 }
 
-// 3. Decorator base
+// Decorator base
 abstract class PhotoDecorator implements PhotoComponent {
   final PhotoComponent component;
   PhotoDecorator(this.component);
@@ -38,8 +38,8 @@ abstract class PhotoDecorator implements PhotoComponent {
   Widget render() => component.render();
 }
 
-// 4a. BorderDecorator
-// 4a. BorderDecorator in photo_component.dart
+// BorderDecorator
+// BorderDecorator in photo_component.dart
 class BorderDecorator extends PhotoDecorator {
   final bool isSelected;
   final Color borderColor;
@@ -70,7 +70,7 @@ class BorderDecorator extends PhotoDecorator {
   }
 }
 
-// 4b. CheckmarkDecorator
+// CheckmarkDecorator
 class CheckmarkDecorator extends PhotoDecorator {
   final bool isSelected;
 
